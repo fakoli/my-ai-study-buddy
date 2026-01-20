@@ -24,6 +24,7 @@ class SQLiteStorage(StorageBackend):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._connection: aiosqlite.Connection | None = None
+        self._transaction_depth = 0
 
     async def _get_connection(self) -> aiosqlite.Connection:
         """Get or create database connection."""
@@ -57,6 +58,13 @@ class SQLiteStorage(StorageBackend):
         """)
 
         await conn.commit()
+
+    def _in_transaction(self) -> bool:
+        return self._transaction_depth > 0
+
+    async def _commit_if_needed(self, conn: aiosqlite.Connection) -> None:
+        if not self._in_transaction():
+            await conn.commit()
 
     async def close(self) -> None:
         """Close the database connection."""
@@ -123,7 +131,7 @@ class SQLiteStorage(StorageBackend):
             """,
             (collection, data["id"], json.dumps(data, default=str)),
         )
-        await conn.commit()
+        await self._commit_if_needed(conn)
 
         return data
 
@@ -149,7 +157,7 @@ class SQLiteStorage(StorageBackend):
             """,
             (json.dumps(updated, default=str), collection, id),
         )
-        await conn.commit()
+        await self._commit_if_needed(conn)
 
         return updated
 
@@ -160,7 +168,7 @@ class SQLiteStorage(StorageBackend):
             "DELETE FROM documents WHERE collection = ? AND id = ?",
             (collection, id),
         )
-        await conn.commit()
+        await self._commit_if_needed(conn)
 
         deleted = cursor.rowcount > 0
         await cursor.close()
@@ -187,16 +195,22 @@ class SQLiteStorage(StorageBackend):
     async def transaction(self) -> AsyncIterator["SQLiteStorage"]:
         """Context manager for transactions with automatic rollback on error."""
         conn = await self._get_connection()
+        is_outermost = self._transaction_depth == 0
+        if is_outermost:
+            # Start transaction by disabling autocommit
+            await conn.execute("BEGIN IMMEDIATE")
 
-        # Start transaction by disabling autocommit
-        await conn.execute("BEGIN IMMEDIATE")
-
+        self._transaction_depth += 1
         try:
             yield self
-            await conn.commit()
+            if is_outermost:
+                await conn.commit()
         except Exception:
-            await conn.rollback()
+            if is_outermost:
+                await conn.rollback()
             raise
+        finally:
+            self._transaction_depth -= 1
 
     async def batch_delete(
         self, collection: str, ids: list[str]
@@ -221,7 +235,7 @@ class SQLiteStorage(StorageBackend):
 
         delete_query = f"DELETE FROM documents WHERE collection = ? AND id IN ({placeholders})"
         await conn.execute(delete_query, (collection, *ids))
-        await conn.commit()
+        await self._commit_if_needed(conn)
 
         for id in ids:
             results[id] = id in existing
@@ -247,6 +261,6 @@ class SQLiteStorage(StorageBackend):
                 for item in items
             ],
         )
-        await conn.commit()
+        await self._commit_if_needed(conn)
 
         return items
