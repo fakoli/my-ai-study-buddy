@@ -343,9 +343,11 @@ export function ModuleEditor() {
         });
         success('Module updated successfully');
       } else {
+        // Calculate order_index for new module (append to end)
+        const orderIndex = courseData?.modules?.length ?? 0;
         const newModule = await createModule.mutateAsync({
           courseId,
-          data: moduleData as ModuleCreate,
+          data: { ...moduleData, order_index: orderIndex } as ModuleCreate,
         });
         success('Module created successfully');
         navigate(`/courses/${courseId}/modules/${newModule.id}`, { replace: true });
