@@ -5,6 +5,8 @@ import {
   Check,
   ChevronRight,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   Sparkles,
   Plus,
   Trash2,
@@ -131,6 +133,15 @@ export function CourseEditor() {
       const updated = instructions.learning_objectives.filter((_, i) => i !== index);
       setInstructions({ ...instructions, learning_objectives: updated });
     }
+  };
+
+  const handleMoveObjective = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= instructions.learning_objectives.length) return;
+
+    const updated = [...instructions.learning_objectives];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    setInstructions({ ...instructions, learning_objectives: updated });
   };
 
   const handleAddModule = () => {
@@ -556,7 +567,28 @@ export function CourseEditor() {
                 </label>
                 <div className="space-y-2">
                   {instructions.learning_objectives.map((objective, index) => (
-                    <div key={index} className="flex gap-2">
+                    <div key={index} className="flex gap-2 items-center">
+                      <div className="flex flex-col">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveObjective(index, 'up')}
+                          disabled={index === 0}
+                          className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move up"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveObjective(index, 'down')}
+                          disabled={index === instructions.learning_objectives.length - 1}
+                          className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move down"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <span className="text-gray-400 text-sm w-6 text-center">{index + 1}</span>
                       <input
                         type="text"
                         value={objective}
