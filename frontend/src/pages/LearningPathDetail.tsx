@@ -13,12 +13,15 @@ import {
 import { Card, CardContent, CardHeader } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
+import { Input } from '../components/common/Input';
+import { Textarea } from '../components/common/Textarea';
 import {
   useLearningPath,
+  useUpdateLearningPath,
   useDeleteLearningPath,
   useRemoveCourseFromPath,
 } from '../hooks/useLearningPaths';
-import { useDiscoverCourses } from '../hooks/useCourses';
+import { useDiscoverCourses, useMyCourses } from '../hooks/useCourses';
 import { useAddCourseToPath } from '../hooks/useLearningPaths';
 import { useToast } from '../hooks/useToast';
 import type { CourseDifficulty, CourseResponse } from '../types';
@@ -35,16 +38,25 @@ export function LearningPathDetail() {
   const { success, error: showError } = useToast();
 
   const { data, isLoading, error } = useLearningPath(pathId || '');
+  const updatePath = useUpdateLearningPath();
   const deletePath = useDeleteLearningPath();
   const removeCourse = useRemoveCourseFromPath();
   const addCourse = useAddCourseToPath();
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [addCourseModalOpen, setAddCourseModalOpen] = useState(false);
   const [courseToRemove, setCourseToRemove] = useState<CourseResponse | null>(null);
 
-  // Fetch available courses for adding
+  // Edit form state
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDifficulty, setEditDifficulty] = useState<CourseDifficulty>('beginner');
+  const [editEstimatedHours, setEditEstimatedHours] = useState('');
+
+  // Fetch available courses for adding (both user's own and public courses)
   const { data: discoverData } = useDiscoverCourses({ limit: 50 });
+  const { data: myCourses } = useMyCourses();
 
   const handleDeletePath = async () => {
     if (!pathId) return;
@@ -82,6 +94,37 @@ export function LearningPathDetail() {
     }
   };
 
+  const openEditModal = () => {
+    if (data?.path) {
+      setEditTitle(data.path.title);
+      setEditDescription(data.path.description || '');
+      setEditDifficulty(data.path.difficulty);
+      setEditEstimatedHours(data.path.estimated_hours?.toString() || '');
+      setEditModalOpen(true);
+    }
+  };
+
+  const handleEditPath = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pathId) return;
+    try {
+      await updatePath.mutateAsync({
+        pathId,
+        data: {
+          title: editTitle,
+          description: editDescription || undefined,
+          difficulty: editDifficulty,
+          estimated_hours: editEstimatedHours ? parseInt(editEstimatedHours, 10) : undefined,
+        },
+      });
+      success('Learning path updated successfully');
+      setEditModalOpen(false);
+    } catch (err) {
+      console.error('Failed to update path:', err);
+      showError('Failed to update learning path. Please try again.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 page-enter">
@@ -113,10 +156,17 @@ export function LearningPathDetail() {
   const { path, courses } = data;
   const colors = difficultyColors[path.difficulty];
 
-  // Filter out courses already in the path
-  const availableCourses = discoverData?.courses.filter(
+  // Combine user's own courses with discovered courses, deduplicate, and filter out those already in the path
+  const allCourses = [
+    ...(myCourses ?? []),
+    ...(discoverData?.courses ?? []),
+  ];
+  const uniqueCourses = allCourses.filter(
+    (course, index, self) => self.findIndex((c) => c.id === course.id) === index
+  );
+  const availableCourses = uniqueCourses.filter(
     (c) => !path.course_ids.includes(c.id)
-  ) ?? [];
+  );
 
   return (
     <div className="space-y-6 page-enter">
@@ -146,6 +196,10 @@ export function LearningPathDetail() {
           <Button variant="secondary" onClick={() => setAddCourseModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Course
+          </Button>
+          <Button variant="secondary" onClick={openEditModal}>
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
           </Button>
           <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
             <Trash2 className="w-4 h-4 mr-2" />
@@ -313,6 +367,71 @@ export function LearningPathDetail() {
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* Edit Path Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Learning Path"
+      >
+        <form onSubmit={handleEditPath} className="space-y-4">
+          <Input
+            id="edit-title"
+            label="Title"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            placeholder="e.g., Production Engineer"
+            required
+          />
+          <Textarea
+            id="edit-description"
+            label="Description (optional)"
+            value={editDescription}
+            onChange={(e) => setEditDescription(e.target.value)}
+            placeholder="What will learners achieve with this path?"
+            rows={3}
+            showCharCount
+            maxLength={500}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Difficulty
+              </label>
+              <select
+                value={editDifficulty}
+                onChange={(e) => setEditDifficulty(e.target.value as CourseDifficulty)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+            <Input
+              id="edit-estimated-hours"
+              label="Est. Hours (optional)"
+              type="number"
+              value={editEstimatedHours}
+              onChange={(e) => setEditEstimatedHours(e.target.value)}
+              placeholder="40"
+              min={1}
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" isLoading={updatePath.isPending}>
+              Save Changes
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

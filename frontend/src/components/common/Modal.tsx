@@ -41,14 +41,14 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     [onClose]
   );
 
+  // Handle body overflow and initial focus (only on open/close)
   useEffect(() => {
     if (!isOpen) return;
 
     previousActiveElement.current = document.activeElement as HTMLElement;
-    document.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
 
-    // Focus first focusable element in modal
+    // Focus first focusable element in modal (only on initial open)
     setTimeout(() => {
       if (modalRef.current) {
         const focusableElements = modalRef.current.querySelectorAll(FOCUSABLE_ELEMENTS);
@@ -58,13 +58,22 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     }, 0);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
 
       // Restore focus to previously focused element
       if (previousActiveElement.current) {
         previousActiveElement.current.focus();
       }
+    };
+  }, [isOpen]);
+
+  // Handle keydown separately to avoid re-focusing on callback changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, handleKeyDown]);
 
