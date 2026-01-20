@@ -8,6 +8,7 @@ from config import Settings
 from exceptions import ConflictException, InsufficientTokensException, UnauthorizedException
 from models.user import User, UserCreate, UserInDB
 from storage.base import StorageBackend
+from utils.datetime_utils import ensure_datetime
 
 
 class AuthService:
@@ -90,9 +91,7 @@ class AuthService:
             id=user_data["id"],
             email=user_data["email"],
             name=user_data["name"],
-            created_at=datetime.fromisoformat(user_data["created_at"])
-            if isinstance(user_data["created_at"], str)
-            else user_data["created_at"],
+            created_at=ensure_datetime(user_data["created_at"]),
             token_balance=user_data.get("token_balance", 100),
         )
 

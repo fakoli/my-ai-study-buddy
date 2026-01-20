@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from config import Settings
-from exceptions import InsufficientTokensException
+from exceptions import AIServiceException, InsufficientTokensException
 from services.auth_service import AuthService
 from storage.base import StorageBackend
 
@@ -47,9 +47,13 @@ class AIService:
         await self.auth_service.consume_tokens(user_id, amount)
 
     async def _call_ai(self, prompt: str, system_prompt: str | None = None) -> str:
-        """Call the AI provider."""
+        """Call the AI provider.
+
+        Raises:
+            AIServiceException: If API key is not configured or API call fails.
+        """
         if not self.settings.anthropic_api_key:
-            return f"[AI Response - API key not configured]\n\nPrompt: {prompt}"
+            raise AIServiceException("AI service not configured: missing API key")
 
         try:
             import anthropic
@@ -68,8 +72,12 @@ class AIService:
 
             return response.content[0].text
 
-        except Exception as e:
-            return f"[AI Error: {str(e)}]"
+        except anthropic.APIConnectionError as e:
+            raise AIServiceException(f"Failed to connect to AI service: {e}")
+        except anthropic.RateLimitError as e:
+            raise AIServiceException(f"AI service rate limit exceeded: {e}")
+        except anthropic.APIStatusError as e:
+            raise AIServiceException(f"AI service error: {e.message}")
 
     async def explain(self, user_id: str, request: ExplainRequest) -> AIResponse:
         """Explain a concept."""

@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends, Header
+from jose import JWTError
 
 from config import Settings, get_settings
 from exceptions import UnauthorizedException
@@ -51,8 +52,10 @@ async def get_optional_user(
 
         auth_service = AuthService(storage, settings)
         return await auth_service.get_user_from_token(token)
-    except Exception:
+    except (UnauthorizedException, JWTError):
+        # Expected auth failures - return None for optional user
         return None
+    # Let other exceptions (DB errors, etc.) propagate
 
 
 # Type aliases for cleaner dependency injection

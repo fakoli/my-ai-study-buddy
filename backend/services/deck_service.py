@@ -1,15 +1,17 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from exceptions import ForbiddenException, NotFoundException
+from exceptions import ErrorCode, NotFoundException
 from models.card import Card, CardCreate, CardUpdate
 from models.deck import Deck, DeckCreate, DeckResponse, DeckUpdate, DeckWithCards
+from services.base_service import BaseService
 from storage.base import StorageBackend
+from utils.datetime_utils import ensure_datetime
 
 
-class DeckService:
+class DeckService(BaseService):
     def __init__(self, storage: StorageBackend):
-        self.storage = storage
+        super().__init__(storage)
 
     async def list_decks(self, user_id: str) -> list[DeckResponse]:
         decks = await self.storage.list("decks", {"user_id": user_id})
@@ -22,12 +24,8 @@ class DeckService:
                     user_id=deck_data["user_id"],
                     title=deck_data["title"],
                     description=deck_data.get("description"),
-                    created_at=datetime.fromisoformat(deck_data["created_at"])
-                    if isinstance(deck_data["created_at"], str)
-                    else deck_data["created_at"],
-                    updated_at=datetime.fromisoformat(deck_data["updated_at"])
-                    if isinstance(deck_data["updated_at"], str)
-                    else deck_data["updated_at"],
+                    created_at=ensure_datetime(deck_data["created_at"]),
+                    updated_at=ensure_datetime(deck_data["updated_at"]),
                     card_count=card_count,
                 )
             )
@@ -47,11 +45,9 @@ class DeckService:
         return deck
 
     async def get_deck(self, deck_id: str, user_id: str) -> DeckWithCards:
-        deck_data = await self.storage.get("decks", deck_id)
-        if not deck_data:
-            raise NotFoundException("Deck not found")
-        if deck_data["user_id"] != user_id:
-            raise ForbiddenException("Access denied")
+        deck_data = await self.get_owned_resource(
+            "decks", deck_id, user_id, "Deck", ErrorCode.DECK_NOT_FOUND
+        )
 
         cards_data = await self.storage.list("cards", {"deck_id": deck_id})
         cards = [
@@ -61,9 +57,7 @@ class DeckService:
                 front=c["front"],
                 back=c["back"],
                 visual_url=c.get("visual_url"),
-                created_at=datetime.fromisoformat(c["created_at"])
-                if isinstance(c["created_at"], str)
-                else c["created_at"],
+                created_at=ensure_datetime(c["created_at"]),
             )
             for c in cards_data
         ]
@@ -73,21 +67,15 @@ class DeckService:
             user_id=deck_data["user_id"],
             title=deck_data["title"],
             description=deck_data.get("description"),
-            created_at=datetime.fromisoformat(deck_data["created_at"])
-            if isinstance(deck_data["created_at"], str)
-            else deck_data["created_at"],
-            updated_at=datetime.fromisoformat(deck_data["updated_at"])
-            if isinstance(deck_data["updated_at"], str)
-            else deck_data["updated_at"],
+            created_at=ensure_datetime(deck_data["created_at"]),
+            updated_at=ensure_datetime(deck_data["updated_at"]),
             cards=cards,
         )
 
     async def update_deck(self, deck_id: str, user_id: str, update_data: DeckUpdate) -> Deck:
-        deck_data = await self.storage.get("decks", deck_id)
-        if not deck_data:
-            raise NotFoundException("Deck not found")
-        if deck_data["user_id"] != user_id:
-            raise ForbiddenException("Access denied")
+        await self.get_owned_resource(
+            "decks", deck_id, user_id, "Deck", ErrorCode.DECK_NOT_FOUND
+        )
 
         updates = update_data.model_dump(exclude_unset=True)
         updates["updated_at"] = datetime.now(timezone.utc)
@@ -98,20 +86,14 @@ class DeckService:
             user_id=updated["user_id"],
             title=updated["title"],
             description=updated.get("description"),
-            created_at=datetime.fromisoformat(updated["created_at"])
-            if isinstance(updated["created_at"], str)
-            else updated["created_at"],
-            updated_at=datetime.fromisoformat(updated["updated_at"])
-            if isinstance(updated["updated_at"], str)
-            else updated["updated_at"],
+            created_at=ensure_datetime(updated["created_at"]),
+            updated_at=ensure_datetime(updated["updated_at"]),
         )
 
     async def delete_deck(self, deck_id: str, user_id: str) -> bool:
-        deck_data = await self.storage.get("decks", deck_id)
-        if not deck_data:
-            raise NotFoundException("Deck not found")
-        if deck_data["user_id"] != user_id:
-            raise ForbiddenException("Access denied")
+        await self.get_owned_resource(
+            "decks", deck_id, user_id, "Deck", ErrorCode.DECK_NOT_FOUND
+        )
 
         cards = await self.storage.list("cards", {"deck_id": deck_id})
         for card in cards:
@@ -120,11 +102,9 @@ class DeckService:
         return await self.storage.delete("decks", deck_id)
 
     async def add_card(self, deck_id: str, user_id: str, card_data: CardCreate) -> Card:
-        deck_data = await self.storage.get("decks", deck_id)
-        if not deck_data:
-            raise NotFoundException("Deck not found")
-        if deck_data["user_id"] != user_id:
-            raise ForbiddenException("Access denied")
+        await self.verify_parent_ownership(
+            "decks", deck_id, user_id, "Deck", ErrorCode.DECK_NOT_FOUND
+        )
 
         now = datetime.now(timezone.utc)
         card = Card(
@@ -144,15 +124,17 @@ class DeckService:
     async def update_card(
         self, deck_id: str, card_id: str, user_id: str, update_data: CardUpdate
     ) -> Card:
-        deck_data = await self.storage.get("decks", deck_id)
-        if not deck_data:
-            raise NotFoundException("Deck not found")
-        if deck_data["user_id"] != user_id:
-            raise ForbiddenException("Access denied")
+        await self.verify_parent_ownership(
+            "decks", deck_id, user_id, "Deck", ErrorCode.DECK_NOT_FOUND
+        )
 
         card_data = await self.storage.get("cards", card_id)
         if not card_data or card_data["deck_id"] != deck_id:
-            raise NotFoundException("Card not found")
+            raise NotFoundException(
+                "Card not found",
+                code=ErrorCode.CARD_NOT_FOUND,
+                details={"card_id": card_id, "deck_id": deck_id},
+            )
 
         updates = update_data.model_dump(exclude_unset=True)
         updated = await self.storage.update("cards", card_id, updates)
@@ -165,21 +147,21 @@ class DeckService:
             front=updated["front"],
             back=updated["back"],
             visual_url=updated.get("visual_url"),
-            created_at=datetime.fromisoformat(updated["created_at"])
-            if isinstance(updated["created_at"], str)
-            else updated["created_at"],
+            created_at=ensure_datetime(updated["created_at"]),
         )
 
     async def delete_card(self, deck_id: str, card_id: str, user_id: str) -> bool:
-        deck_data = await self.storage.get("decks", deck_id)
-        if not deck_data:
-            raise NotFoundException("Deck not found")
-        if deck_data["user_id"] != user_id:
-            raise ForbiddenException("Access denied")
+        await self.verify_parent_ownership(
+            "decks", deck_id, user_id, "Deck", ErrorCode.DECK_NOT_FOUND
+        )
 
         card_data = await self.storage.get("cards", card_id)
         if not card_data or card_data["deck_id"] != deck_id:
-            raise NotFoundException("Card not found")
+            raise NotFoundException(
+                "Card not found",
+                code=ErrorCode.CARD_NOT_FOUND,
+                details={"card_id": card_id, "deck_id": deck_id},
+            )
 
         result = await self.storage.delete("cards", card_id)
 
