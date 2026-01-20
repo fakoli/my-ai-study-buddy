@@ -36,6 +36,11 @@ class AdminService(BaseService):
 
         Returns:
             Tuple of (users list, total count)
+
+        Note:
+            This MVP implementation loads all users into memory for filtering and pagination.
+            For production use with large user bases (>10,000 users), consider implementing
+            database-level filtering and pagination in the storage backend.
         """
         all_users = await self.storage.list("users", {})
 
@@ -139,29 +144,42 @@ class AdminService(BaseService):
 
         previous_balance = user_data.get("token_balance", 100)
         new_balance = max(0, previous_balance + amount)  # Prevent negative balance
+        actual_amount = new_balance - previous_balance  # Actual amount applied after clamping
 
-        # Update user's token balance
-        await self.storage.update("users", user_id, {"token_balance": new_balance})
+        try:
+            # Update user's token balance
+            await self.storage.update("users", user_id, {"token_balance": new_balance})
 
-        # Create transaction record
-        now = datetime.now(timezone.utc)
-        transaction = TokenTransaction(
-            id=str(uuid4()),
-            user_id=user_id,
-            amount=amount,
-            balance_after=new_balance,
-            operation="admin_adjustment",
-            reason=reason,
-            admin_id=admin_id,
-            created_at=now,
-        )
-        await self.storage.create("token_transactions", transaction.model_dump())
+            # Create transaction record with actual amount applied
+            now = datetime.now(timezone.utc)
+            transaction = TokenTransaction(
+                id=str(uuid4()),
+                user_id=user_id,
+                amount=actual_amount,
+                balance_after=new_balance,
+                operation="admin_adjustment",
+                reason=reason,
+                admin_id=admin_id,
+                created_at=now,
+            )
+            await self.storage.create("token_transactions", transaction.model_dump())
+        except Exception:
+            # Attempt to roll back the balance update if transaction logging fails
+            try:
+                await self.storage.update(
+                    "users",
+                    user_id,
+                    {"token_balance": previous_balance},
+                )
+            finally:
+                # Re-raise the original error to signal failure to the caller
+                raise
 
         return AdjustTokensResponse(
             user_id=user_id,
             previous_balance=previous_balance,
             new_balance=new_balance,
-            amount=amount,
+            amount=actual_amount,
             transaction_id=transaction.id,
         )
 
@@ -170,6 +188,11 @@ class AdminService(BaseService):
 
         Returns:
             Dict with stats like total users, etc.
+
+        Note:
+            This MVP implementation loads all users into memory for computation.
+            For production use with large user bases (>10,000 users), consider implementing
+            database-level aggregations in the storage backend.
         """
         all_users = await self.storage.list("users", {})
         total_users = len(all_users)

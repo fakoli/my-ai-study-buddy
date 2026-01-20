@@ -19,7 +19,7 @@ class TokenTransaction(BaseModel):
 class AdjustTokensRequest(BaseModel):
     """Request to adjust a user's token balance."""
 
-    amount: int = Field(..., description="Positive to add, negative to deduct")
+    amount: int = Field(..., ge=-1000000, le=1000000, description="Positive to add, negative to deduct")
     reason: str = Field(..., min_length=1, max_length=500)
 
 
