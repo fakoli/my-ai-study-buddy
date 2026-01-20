@@ -37,13 +37,20 @@ class AIService:
         self.settings = settings
         self.auth_service = AuthService(storage, settings)
 
-    async def _consume_tokens(self, user_id: str, amount: int) -> None:
-        """Consume tokens for AI operations."""
+    async def _check_token_balance(self, user_id: str, amount: int) -> None:
+        """Check if user has sufficient tokens (does not consume).
+
+        Raises:
+            InsufficientTokensException: If user doesn't have enough tokens.
+        """
         balance = await self.auth_service.get_token_balance(user_id)
         if balance < amount:
             raise InsufficientTokensException(
                 f"Insufficient tokens. Required: {amount}, Available: {balance}"
             )
+
+    async def _consume_tokens(self, user_id: str, amount: int) -> None:
+        """Consume tokens after successful AI operation."""
         await self.auth_service.consume_tokens(user_id, amount)
 
     async def _call_ai(self, prompt: str, system_prompt: str | None = None) -> str:
@@ -82,7 +89,7 @@ class AIService:
     async def explain(self, user_id: str, request: ExplainRequest) -> AIResponse:
         """Explain a concept."""
         tokens_cost = 5
-        await self._consume_tokens(user_id, tokens_cost)
+        await self._check_token_balance(user_id, tokens_cost)
 
         prompt = f"Explain the following concept clearly and concisely:\n\n{request.concept}"
         if request.context:
@@ -94,14 +101,16 @@ class AIService:
             "Use bullet points and structure for clarity."
         )
 
+        # Call AI first - only consume tokens on success
         content = await self._call_ai(prompt, system)
+        await self._consume_tokens(user_id, tokens_cost)
 
         return AIResponse(content=content, tokens_used=tokens_cost)
 
     async def hint(self, user_id: str, request: HintRequest) -> AIResponse:
         """Provide a progressive hint."""
         tokens_cost = 3
-        await self._consume_tokens(user_id, tokens_cost)
+        await self._check_token_balance(user_id, tokens_cost)
 
         hint_instructions = {
             1: "Give a very subtle hint without revealing the answer. Just point in the right direction.",
@@ -120,14 +129,16 @@ class AIService:
             "without simply giving it away. Encourage thinking."
         )
 
+        # Call AI first - only consume tokens on success
         content = await self._call_ai(prompt, system)
+        await self._consume_tokens(user_id, tokens_cost)
 
         return AIResponse(content=content, tokens_used=tokens_cost)
 
     async def examples(self, user_id: str, request: ExamplesRequest) -> AIResponse:
         """Generate examples for a concept."""
         tokens_cost = 5
-        await self._consume_tokens(user_id, tokens_cost)
+        await self._check_token_balance(user_id, tokens_cost)
 
         prompt = (
             f"Generate {request.num_examples} clear, practical examples "
@@ -140,14 +151,16 @@ class AIService:
             "Create examples that are relatable, memorable, and instructive."
         )
 
+        # Call AI first - only consume tokens on success
         content = await self._call_ai(prompt, system)
+        await self._consume_tokens(user_id, tokens_cost)
 
         return AIResponse(content=content, tokens_used=tokens_cost)
 
     async def simplify(self, user_id: str, request: SimplifyRequest) -> AIResponse:
         """Simplify complex content."""
         tokens_cost = 4
-        await self._consume_tokens(user_id, tokens_cost)
+        await self._check_token_balance(user_id, tokens_cost)
 
         prompt = (
             f"Simplify the following content for a beginner learner:\n\n{request.content}\n\n"
@@ -159,6 +172,8 @@ class AIService:
             "Explain like you're talking to a curious 12-year-old."
         )
 
+        # Call AI first - only consume tokens on success
         content = await self._call_ai(prompt, system)
+        await self._consume_tokens(user_id, tokens_cost)
 
         return AIResponse(content=content, tokens_used=tokens_cost)
