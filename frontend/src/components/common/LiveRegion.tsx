@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, ReactNode } from 'react';
+import { useState, useEffect, useCallback, createContext, ReactNode, useRef } from 'react';
 
 type Politeness = 'polite' | 'assertive';
 
@@ -12,17 +12,55 @@ interface LiveRegionProviderProps {
   children: ReactNode;
 }
 
+interface QueuedMessage {
+  message: string;
+  politeness: Politeness;
+  key: number;
+}
+
 export function LiveRegionProvider({ children }: LiveRegionProviderProps) {
   const [politeMessage, setPoliteMessage] = useState('');
   const [assertiveMessage, setAssertiveMessage] = useState('');
+  const messageKeyRef = useRef(0);
+  const queueRef = useRef<QueuedMessage[]>([]);
+  const processingRef = useRef(false);
+  const processQueueRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const processQueue = () => {
+      if (processingRef.current || queueRef.current.length === 0) return;
+
+      processingRef.current = true;
+      const { message, politeness } = queueRef.current.shift()!;
+
+      if (politeness === 'assertive') {
+        setAssertiveMessage('');
+        setTimeout(() => {
+          setAssertiveMessage(message);
+          processingRef.current = false;
+          processQueue();
+        }, 100);
+      } else {
+        setPoliteMessage('');
+        setTimeout(() => {
+          setPoliteMessage(message);
+          processingRef.current = false;
+          processQueue();
+        }, 100);
+      }
+    };
+
+    processQueueRef.current = processQueue;
+  }, []);
 
   const announce = useCallback((message: string, politeness: Politeness = 'polite') => {
-    if (politeness === 'assertive') {
-      setAssertiveMessage('');
-      setTimeout(() => setAssertiveMessage(message), 100);
-    } else {
-      setPoliteMessage('');
-      setTimeout(() => setPoliteMessage(message), 100);
+    queueRef.current.push({
+      message,
+      politeness,
+      key: messageKeyRef.current++,
+    });
+    if (processQueueRef.current) {
+      processQueueRef.current();
     }
   }, []);
 

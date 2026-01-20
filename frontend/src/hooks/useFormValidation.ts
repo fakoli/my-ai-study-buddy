@@ -98,7 +98,8 @@ export function useFormValidation<T extends string>(
   config: FormConfig<T>,
   initialValues?: Partial<Record<T, string>>
 ): UseFormValidationReturn<T> {
-  const fieldNames = Object.keys(config) as T[];
+  // Memoize fieldNames to prevent it from changing on every render
+  const fieldNames = useMemo(() => Object.keys(config) as T[], [config]);
 
   const createInitialState = useCallback((): FormState<T> => {
     const state = {} as FormState<T>;
@@ -150,54 +151,73 @@ export function useFormValidation<T extends string>(
   const validateField = useCallback(
     (name: T): boolean => {
       const fieldConfig = config[name];
-      const error = validateValue(formState[name].value, fieldConfig.rules, values);
-      const fieldIsValid = error === null;
+      let fieldIsValid = true;
+      
+      setFormState((prev) => {
+        const currentValues = {} as Record<string, string>;
+        for (const n of fieldNames) {
+          currentValues[n] = prev[n].value;
+        }
+        
+        const error = validateValue(prev[name].value, fieldConfig.rules, currentValues);
+        fieldIsValid = error === null;
 
-      setFormState((prev) => ({
-        ...prev,
-        [name]: {
-          ...prev[name],
-          error,
-          isValid: fieldIsValid,
-        },
-      }));
+        return {
+          ...prev,
+          [name]: {
+            ...prev[name],
+            error,
+            isValid: fieldIsValid,
+          },
+        };
+      });
 
       return fieldIsValid;
     },
-    [config, formState, values]
+    [config, fieldNames]
   );
 
   const validateForm = useCallback((): boolean => {
     let allValid = true;
-    const newState = { ...formState };
 
-    for (const name of fieldNames) {
-      const fieldConfig = config[name];
-      const error = validateValue(newState[name].value, fieldConfig.rules, values);
-      const fieldIsValid = error === null;
-
-      newState[name] = {
-        ...newState[name],
-        error,
-        isValid: fieldIsValid,
-        touched: true,
-      };
-
-      if (!fieldIsValid) {
-        allValid = false;
+    setFormState((prev) => {
+      const newState = { ...prev };
+      const currentValues = {} as Record<string, string>;
+      
+      for (const name of fieldNames) {
+        currentValues[name] = newState[name].value;
       }
-    }
 
-    setFormState(newState);
+      for (const name of fieldNames) {
+        const fieldConfig = config[name];
+        const error = validateValue(newState[name].value, fieldConfig.rules, currentValues);
+        const fieldIsValid = error === null;
+
+        newState[name] = {
+          ...newState[name],
+          error,
+          isValid: fieldIsValid,
+          touched: true,
+        };
+
+        if (!fieldIsValid) {
+          allValid = false;
+        }
+      }
+
+      return newState;
+    });
+    
     return allValid;
-  }, [config, fieldNames, formState, values]);
+  }, [config, fieldNames]);
 
   const setFieldValue = useCallback(
     (name: T, value: string) => {
       const fieldConfig = config[name];
-      const shouldValidate = fieldConfig.validateOnChange && formState[name].touched;
 
       setFormState((prev) => {
+        const shouldValidate = fieldConfig.validateOnChange && prev[name].touched;
+        
         const newState = {
           ...prev,
           [name]: {
@@ -219,7 +239,7 @@ export function useFormValidation<T extends string>(
         return newState;
       });
     },
-    [config, fieldNames, formState]
+    [config, fieldNames]
   );
 
   const setFieldError = useCallback((name: T, error: string | null) => {

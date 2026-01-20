@@ -42,20 +42,20 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
   );
 
   useEffect(() => {
-    if (isOpen) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
+    if (!isOpen) return;
 
-      // Focus first focusable element in modal
-      setTimeout(() => {
-        if (modalRef.current) {
-          const focusableElements = modalRef.current.querySelectorAll(FOCUSABLE_ELEMENTS);
-          const firstElement = focusableElements[0] as HTMLElement;
-          firstElement?.focus();
-        }
-      }, 0);
-    }
+    previousActiveElement.current = document.activeElement as HTMLElement;
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    // Focus first focusable element in modal
+    setTimeout(() => {
+      if (modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll(FOCUSABLE_ELEMENTS);
+        const firstElement = focusableElements[0] as HTMLElement;
+        firstElement?.focus();
+      }
+    }, 0);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);

@@ -208,19 +208,19 @@ class SQLiteStorage(StorageBackend):
         conn = await self._get_connection()
         results = {}
 
+        # Validate list length to prevent abuse
+        if len(ids) > 1000:
+            raise ValueError("Cannot delete more than 1000 items at once")
+
         # Use a single transaction for all deletes
         placeholders = ",".join("?" * len(ids))
-        cursor = await conn.execute(
-            f"SELECT id FROM documents WHERE collection = ? AND id IN ({placeholders})",
-            (collection, *ids),
-        )
+        query = f"SELECT id FROM documents WHERE collection = ? AND id IN ({placeholders})"
+        cursor = await conn.execute(query, (collection, *ids))
         existing = {row["id"] for row in await cursor.fetchall()}
         await cursor.close()
 
-        await conn.execute(
-            f"DELETE FROM documents WHERE collection = ? AND id IN ({placeholders})",
-            (collection, *ids),
-        )
+        delete_query = f"DELETE FROM documents WHERE collection = ? AND id IN ({placeholders})"
+        await conn.execute(delete_query, (collection, *ids))
         await conn.commit()
 
         for id in ids:

@@ -5,7 +5,6 @@ from main import app
 from storage.json_storage import JSONStorage
 import tempfile
 import shutil
-import os
 
 
 @pytest.fixture
