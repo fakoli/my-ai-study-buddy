@@ -1,0 +1,67 @@
+{
+  "cards": [
+    {
+      "front": "What are the four tree traversal orders?",
+      "back": "Preorder: Root-Left-Right. Inorder: Left-Root-Right. Postorder: Left-Right-Root. Level-order: BFS by level. Inorder on BST gives sorted order.",
+      "visual": "visuals/traversals.png"
+    },
+    {
+      "front": "What is the BST property?",
+      "back": "For every node: all values in left subtree < node value, all values in right subtree > node value. This enables O(log n) operations on balanced trees.",
+      "visual": "visuals/bst-operations.png"
+    },
+    {
+      "front": "How do you delete a node with two children from a BST?",
+      "back": "Replace the node's value with its inorder successor (smallest in right subtree), then delete the successor. Alternatively, use inorder predecessor (largest in left subtree)."
+    },
+    {
+      "front": "Why is checking just left.val < root.val < right.val insufficient for BST validation?",
+      "back": "The entire left subtree must be less than root, not just the immediate left child. A node deep in the left subtree could violate the BST property. Pass min/max bounds down recursively."
+    },
+    {
+      "front": "What is the time and space complexity of tree traversals?",
+      "back": "Time: O(n) - visit each node once. Space: O(h) where h is height - for recursion stack. O(n) worst case (skewed), O(log n) balanced."
+    },
+    {
+      "front": "How do you find the Lowest Common Ancestor (LCA) in a binary tree?",
+      "back": "Recursively: if root is null or equals p or q, return root. Search left and right subtrees. If both return non-null, current root is LCA. Otherwise, return the non-null result."
+    },
+    {
+      "front": "How is LCA different in a BST?",
+      "back": "Use BST property: if both p and q are smaller than root, go left. If both larger, go right. If they split (one on each side), current node is LCA. O(log n) vs O(n)."
+    },
+    {
+      "front": "How do you construct a tree from preorder and inorder traversals?",
+      "back": "Preorder[0] is root. Find root in inorder - left of it is left subtree, right is right subtree. Recursively build subtrees. Use hashmap for O(n) total time.",
+      "visual": "visuals/tree-structure.png"
+    },
+    {
+      "front": "What's the trick for iterative inorder traversal?",
+      "back": "Use a stack. Go left as far as possible, pushing nodes. Pop, process, then go to right child. Repeat. current pointer tracks where we are; stack tracks ancestors."
+    },
+    {
+      "front": "How does a BST iterator work with O(h) space?",
+      "back": "Use controlled inorder traversal. Initialize by pushing all left nodes. next() pops a node, returns its value, and pushes all left nodes of its right child."
+    },
+    {
+      "front": "What is the inorder successor of a node in a BST?",
+      "back": "If node has right child: leftmost node in right subtree. If no right child: go up until you find an ancestor where current node is in left subtree."
+    },
+    {
+      "front": "How do you check if a binary tree is symmetric?",
+      "back": "Compare the tree with itself mirrored: left1.val == right2.val and isMirror(left1.left, right2.right) and isMirror(left1.right, right2.left)."
+    },
+    {
+      "front": "What is the difference between tree height and depth?",
+      "back": "Height: longest path from node DOWN to a leaf (leaves have height 0). Depth: distance from root DOWN to the node (root has depth 0). Height of tree = height of root."
+    },
+    {
+      "front": "How do you serialize and deserialize a binary tree?",
+      "back": "Preorder traversal with null markers. Serialize: root,left,right with 'null' for empty. Deserialize: consume values in order, build root, then left subtree, then right subtree."
+    },
+    {
+      "front": "What makes AVL and Red-Black trees balanced?",
+      "back": "AVL: height difference between children ≤ 1. Red-Black: no two consecutive red nodes, same black-height on all paths. Both guarantee O(log n) operations via rotations."
+    }
+  ]
+}

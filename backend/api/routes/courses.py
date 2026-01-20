@@ -1,0 +1,118 @@
+"""Course API routes."""
+
+from typing import Literal
+
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
+
+from dependencies import CurrentUser, OptionalUser, StorageDep
+from models.course import (
+    Course,
+    CourseCreate,
+    CourseDiscoveryFilters,
+    CourseDiscoveryResponse,
+    CourseResponse,
+    CourseUpdate,
+)
+from models.module import ModuleSummary
+from services.course_service import CourseService
+
+router = APIRouter()
+
+
+def get_course_service(storage: StorageDep) -> CourseService:
+    return CourseService(storage)
+
+
+class CourseWithModulesResponse(BaseModel):
+    """Course with module summaries."""
+
+    course: Course
+    modules: list[ModuleSummary]
+
+
+@router.get("", response_model=list[CourseResponse])
+async def list_courses(
+    user: OptionalUser,
+    course_service: CourseService = Depends(get_course_service),
+):
+    """List all courses accessible to the current user."""
+    user_id = user.id if user else None
+    return await course_service.list_courses(user_id)
+
+
+@router.get("/mine", response_model=list[CourseResponse])
+async def list_my_courses(
+    user: CurrentUser,
+    course_service: CourseService = Depends(get_course_service),
+):
+    """List courses authored by the current user."""
+    return await course_service.list_user_courses(user.id)
+
+
+@router.get("/discover", response_model=CourseDiscoveryResponse)
+async def discover_courses(
+    q: str | None = Query(None, description="Search query"),
+    tags: str | None = Query(None, description="Comma-separated tags"),
+    difficulty: Literal["beginner", "intermediate", "advanced"] | None = Query(None),
+    author_id: str | None = Query(None),
+    sort: Literal["popular", "newest", "alphabetical"] = Query("popular"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    course_service: CourseService = Depends(get_course_service),
+):
+    """Browse and search public courses."""
+    filters = CourseDiscoveryFilters(
+        q=q,
+        tags=tags.split(",") if tags else None,
+        difficulty=difficulty,
+        author_id=author_id,
+        sort=sort,
+        page=page,
+        limit=limit,
+    )
+    return await course_service.discover_courses(filters)
+
+
+@router.post("", response_model=Course)
+async def create_course(
+    course_data: CourseCreate,
+    user: CurrentUser,
+    course_service: CourseService = Depends(get_course_service),
+):
+    """Create a new course."""
+    return await course_service.create_course(user.id, user.name, course_data)
+
+
+@router.get("/{course_id}", response_model=CourseWithModulesResponse)
+async def get_course(
+    course_id: str,
+    user: OptionalUser,
+    course_service: CourseService = Depends(get_course_service),
+):
+    """Get a course with its modules."""
+    user_id = user.id if user else None
+    course, modules = await course_service.get_course_with_modules(course_id, user_id)
+    return CourseWithModulesResponse(course=course, modules=modules)
+
+
+@router.put("/{course_id}", response_model=Course)
+async def update_course(
+    course_id: str,
+    update_data: CourseUpdate,
+    user: CurrentUser,
+    course_service: CourseService = Depends(get_course_service),
+):
+    """Update course metadata (author only)."""
+    return await course_service.update_course(course_id, user.id, update_data)
+
+
+@router.delete("/{course_id}")
+async def delete_course(
+    course_id: str,
+    user: CurrentUser,
+    course_service: CourseService = Depends(get_course_service),
+):
+    """Delete a course and all its modules (author only)."""
+    await course_service.delete_course(course_id, user.id)
+    return {"message": "Course deleted successfully"}

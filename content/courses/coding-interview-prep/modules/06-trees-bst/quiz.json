@@ -1,0 +1,136 @@
+{
+  "questions": [
+    {
+      "question": "What does inorder traversal of a BST produce?",
+      "options": [
+        "Elements in insertion order",
+        "Elements in sorted ascending order",
+        "Elements in level order",
+        "Elements in reverse order"
+      ],
+      "correct_index": 1,
+      "explanation": "Inorder traversal visits left-root-right. In a BST, all left subtree values are smaller and all right subtree values are larger, so inorder gives sorted order."
+    },
+    {
+      "question": "What is the time complexity of searching in a balanced BST?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(n log n)"
+      ],
+      "correct_index": 1,
+      "explanation": "In a balanced BST, we eliminate half the remaining nodes at each step by going left or right based on comparison, giving O(log n) time."
+    },
+    {
+      "question": "When deleting a node with two children from a BST, what replaces it?",
+      "options": [
+        "Its left child",
+        "Its right child",
+        "Its inorder successor or predecessor",
+        "The root of the tree"
+      ],
+      "correct_index": 2,
+      "explanation": "We replace the node's value with its inorder successor (smallest in right subtree) or inorder predecessor (largest in left subtree), then delete that node."
+    },
+    {
+      "question": "What is the space complexity of recursive tree traversal?",
+      "options": [
+        "O(1)",
+        "O(log n) for balanced, O(n) for skewed",
+        "O(n) always",
+        "O(n log n)"
+      ],
+      "correct_index": 1,
+      "explanation": "The recursion stack depth equals the tree height. For balanced trees, height is O(log n). For skewed trees (essentially a linked list), height is O(n)."
+    },
+    {
+      "question": "How do you validate if a binary tree is a valid BST?",
+      "options": [
+        "Check if left child < root < right child for each node",
+        "Pass min/max bounds and verify each node falls within range",
+        "Do inorder traversal and check if array is sorted",
+        "Both B and C are correct approaches"
+      ],
+      "correct_index": 3,
+      "explanation": "Option A is wrong - it only checks immediate children, not entire subtrees. Both passing bounds recursively and checking inorder output are valid approaches."
+    },
+    {
+      "question": "In level-order traversal, what data structure is used?",
+      "options": [
+        "Stack",
+        "Queue",
+        "Heap",
+        "Array"
+      ],
+      "correct_index": 1,
+      "explanation": "Level-order traversal uses a queue (FIFO) to process nodes level by level. Add children to back of queue, process from front."
+    },
+    {
+      "question": "What information do you need to construct a unique binary tree?",
+      "options": [
+        "Just preorder traversal",
+        "Just inorder traversal",
+        "Preorder + inorder, or Inorder + postorder",
+        "Any two traversals"
+      ],
+      "correct_index": 2,
+      "explanation": "You need inorder plus either preorder or postorder. Inorder tells you which nodes are in left/right subtrees; pre/postorder tells you the root."
+    },
+    {
+      "question": "What is the difference between LCA in a binary tree vs BST?",
+      "options": [
+        "There is no difference",
+        "BST LCA can use the BST property for O(log n) vs O(n)",
+        "Binary tree LCA is always faster",
+        "BST LCA requires additional space"
+      ],
+      "correct_index": 1,
+      "explanation": "In a BST, if both nodes are smaller, go left; if both larger, go right. When they split, you've found the LCA. This is O(log n) vs O(n) for general binary tree."
+    },
+    {
+      "question": "What is the worst-case time complexity of BST operations?",
+      "options": [
+        "O(1)",
+        "O(log n)",
+        "O(n)",
+        "O(n²)"
+      ],
+      "correct_index": 2,
+      "explanation": "When a BST becomes skewed (like a linked list), operations become O(n). This happens when inserting sorted data into a naive BST."
+    },
+    {
+      "question": "For iterative preorder traversal, why do we push right child first?",
+      "options": [
+        "Because stack is LIFO, so left will be processed first",
+        "It's more efficient",
+        "Right subtrees are always smaller",
+        "The order doesn't matter"
+      ],
+      "correct_index": 0,
+      "explanation": "Stack is Last-In-First-Out. We want to process left child first (preorder: root-left-right), so we push right first so left gets popped first."
+    },
+    {
+      "question": "What makes a BST iterator space-efficient at O(h)?",
+      "options": [
+        "It doesn't store any nodes",
+        "It does controlled inorder traversal, only storing nodes along current path",
+        "It converts the tree to an array first",
+        "It uses recursion"
+      ],
+      "correct_index": 1,
+      "explanation": "The iterator maintains a stack of at most h nodes (height of tree) - the leftmost path from current position. This is controlled inorder traversal."
+    },
+    {
+      "question": "What is the time complexity of finding the kth smallest element in a BST?",
+      "options": [
+        "O(1)",
+        "O(k)",
+        "O(log n)",
+        "O(n)"
+      ],
+      "correct_index": 1,
+      "explanation": "Using inorder traversal (which gives sorted order), we can stop after visiting k nodes. Time is O(k) which is O(n) in worst case but often much better."
+    }
+  ]
+}

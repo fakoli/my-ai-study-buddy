@@ -11,7 +11,14 @@ import { DeckDetail } from './pages/DeckDetail';
 import { Review } from './pages/Review';
 import { Quiz } from './pages/Quiz';
 import { Settings } from './pages/Settings';
-import { Home, BookOpen, Brain, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { LearningPaths } from './pages/LearningPaths';
+import { LearningPathDetail } from './pages/LearningPathDetail';
+import { Courses } from './pages/Courses';
+import { CourseDetail } from './pages/CourseDetail';
+import { CourseEditor } from './pages/CourseEditor';
+import { ModuleViewer } from './pages/ModuleViewer';
+import { ModuleEditor } from './pages/ModuleEditor';
+import { Home, BookOpen, Brain, Settings as SettingsIcon, LogOut, Map, Library } from 'lucide-react';
 import clsx from 'clsx';
 import './index.css';
 
@@ -48,6 +55,8 @@ function Layout() {
 
   const navItems = [
     { to: '/', icon: Home, label: 'Dashboard' },
+    { to: '/paths', icon: Map, label: 'Paths' },
+    { to: '/courses', icon: Library, label: 'Courses' },
     { to: '/decks', icon: BookOpen, label: 'Decks' },
     { to: '/review', icon: Brain, label: 'Review' },
     { to: '/settings', icon: SettingsIcon, label: 'Settings' },
@@ -139,6 +148,18 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Dashboard />} />
+              {/* Learning Paths */}
+              <Route path="/paths" element={<LearningPaths />} />
+              <Route path="/paths/:pathId" element={<LearningPathDetail />} />
+              {/* Courses */}
+              <Route path="/courses" element={<Courses />} />
+              <Route path="/courses/new" element={<CourseEditor />} />
+              <Route path="/courses/:courseId" element={<CourseDetail />} />
+              <Route path="/courses/:courseId/edit" element={<CourseEditor />} />
+              <Route path="/courses/:courseId/modules/new" element={<ModuleEditor />} />
+              <Route path="/courses/:courseId/modules/:moduleId" element={<ModuleViewer />} />
+              <Route path="/courses/:courseId/modules/:moduleId/edit" element={<ModuleEditor />} />
+              {/* Decks (existing) */}
               <Route path="/decks" element={<Decks />} />
               <Route path="/decks/:deckId" element={<DeckDetail />} />
               <Route path="/review" element={<Review />} />

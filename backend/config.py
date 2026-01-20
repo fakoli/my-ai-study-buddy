@@ -1,15 +1,25 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# Define paths for hierarchical .env loading
+PROJECT_ROOT = Path(__file__).parent.parent
+BACKEND_DIR = Path(__file__).parent
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(
+            str(PROJECT_ROOT / ".env"),  # Project root (base config)
+            str(BACKEND_DIR / ".env"),   # Backend dir (overrides)
+        ),
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # App
@@ -52,6 +62,7 @@ class Settings(BaseSettings):
     # AI
     ai_provider: str = "anthropic"
     anthropic_api_key: str | None = None
+    gemini_api_key: str | None = None  # For image generation via nano-banana-pro
 
     # CORS
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]

@@ -86,6 +86,26 @@ async def study_buddy_exception_handler(request: Request, exc: StudyBuddyExcepti
 
     Supports legacy format via X-Error-Format: legacy header for backward compatibility.
     """
+    # Log server errors (5xx) at ERROR level with full context
+    if exc.status_code >= 500:
+        logger.error(
+            f"Server error: {exc.message}",
+            status_code=exc.status_code,
+            error_code=exc.code.value if exc.code else ErrorCode.INTERNAL_ERROR.value,
+            error_details=exc.details,
+            path=request.url.path,
+            method=request.method,
+        )
+    elif exc.status_code >= 400:
+        # Log client errors at WARNING level
+        logger.warning(
+            f"Client error: {exc.message}",
+            status_code=exc.status_code,
+            error_code=exc.code.value if exc.code else None,
+            path=request.url.path,
+            method=request.method,
+        )
+
     # Check for legacy format header
     error_format = request.headers.get("X-Error-Format", "").lower()
 
@@ -120,8 +140,11 @@ async def health_check():
 
 # Import and register routers
 from api.routes import auth, decks, reviews, quiz, progress, references, ai, notifications
+from api.routes import courses, learning_paths, modules, uploads, generation
+from api.routes import user_settings
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+app.include_router(user_settings.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(decks.router, prefix="/api/v1/decks", tags=["decks"])
 app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["reviews"])
 app.include_router(quiz.router, prefix="/api/v1/quiz", tags=["quiz"])
@@ -129,3 +152,10 @@ app.include_router(progress.router, prefix="/api/v1/progress", tags=["progress"]
 app.include_router(references.router, prefix="/api/v1/references", tags=["references"])
 app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+
+# Course authoring system routes
+app.include_router(courses.router, prefix="/api/v1/courses", tags=["courses"])
+app.include_router(learning_paths.router, prefix="/api/v1/paths", tags=["learning-paths"])
+app.include_router(modules.router, prefix="/api/v1/courses", tags=["modules"])
+app.include_router(uploads.router, prefix="/api/v1/uploads", tags=["uploads"])
+app.include_router(generation.router, prefix="/api/v1", tags=["generation"])

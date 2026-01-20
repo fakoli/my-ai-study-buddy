@@ -1,0 +1,89 @@
+{
+  "cards": [
+    {
+      "front": "What is the time complexity of inserting at the END of a dynamic array (ArrayList)?",
+      "back": "O(1) amortized. Usually O(1), but O(n) when array doubles. Doubling cost is spread across all previous O(1) inserts.",
+      "visual": "visuals/amortized-cost.png"
+    },
+    {
+      "front": "What is the space complexity of naive recursive Fibonacci?",
+      "back": "O(n), not O(2^n). Time is O(2^n) but space is O(n) because the call stack depth is at most n. When a branch completes, its stack frames are reclaimed."
+    },
+    {
+      "front": "What is the time complexity of string concatenation in a loop for n iterations?",
+      "back": "O(n²) because each concatenation creates a new string. Use ''.join() for O(n) instead."
+    },
+    {
+      "front": "What does 'amortized analysis' mean?",
+      "back": "Averaging the cost of operations over a sequence. A single operation may be expensive (like array resize), but averaged over many operations, each is cheap."
+    },
+    {
+      "front": "What is the time complexity of list.insert(0, x) in Python?",
+      "back": "O(n) - inserting at the beginning requires shifting all existing elements one position to the right."
+    },
+    {
+      "front": "When does quicksort have O(n²) worst case?",
+      "back": "When pivot selection consistently creates unbalanced partitions, e.g., always picking first element on already-sorted data. Each partition is O(n) with n partitions = O(n²)."
+    },
+    {
+      "front": "What is the Master Theorem formula?",
+      "back": "For T(n) = aT(n/b) + O(n^d): If d > log_b(a): O(n^d). If d = log_b(a): O(n^d log n). If d < log_b(a): O(n^(log_b a)).",
+      "visual": "visuals/growth-curves.png"
+    },
+    {
+      "front": "What is the time complexity of hash table lookup (average vs worst case)?",
+      "back": "Average: O(1). Worst: O(n) when all keys hash to the same bucket. With good hash function and load factor < 0.75, operations are O(1) amortized."
+    },
+    {
+      "front": "What is the space complexity of merge sort?",
+      "back": "O(n) for the auxiliary array used during merging. The recursion adds O(log n) stack space, but O(n) dominates."
+    },
+    {
+      "front": "What is the time complexity of checking if a number is prime?",
+      "back": "O(√n) - only need to check divisors up to the square root. If n has a factor larger than √n, it must also have one smaller than √n."
+    },
+    {
+      "front": "Why is binary search O(log n)?",
+      "back": "Each comparison eliminates half the remaining elements. After k comparisons, n/2^k elements remain. When n/2^k = 1, k = log₂(n).",
+      "visual": "visuals/growth-curves.png"
+    },
+    {
+      "front": "What are the time complexities of BFS and DFS on a graph?",
+      "back": "O(V + E) for both, where V = vertices and E = edges. We visit each vertex once and traverse each edge once."
+    },
+    {
+      "front": "What is the difference between O(1), O(log n), and O(n)?",
+      "back": "O(1): constant, same time regardless of input size. O(log n): grows slowly, doubling input adds one step. O(n): linear, time grows proportionally with input.",
+      "visual": "visuals/growth-curves.png"
+    },
+    {
+      "front": "What is the time complexity of finding the k-th smallest element in an unsorted array?",
+      "back": "O(n) average using Quickselect (partition-based). O(n log n) using sorting. O(n log k) using a max-heap of size k."
+    },
+    {
+      "front": "What is the time complexity of heap operations?",
+      "back": "Insert: O(log n). Delete min/max: O(log n). Get min/max: O(1). Heapify array: O(n). Build heap from n elements: O(n), not O(n log n)."
+    },
+    {
+      "front": "Why is building a heap O(n) and not O(n log n)?",
+      "back": "Half the nodes are leaves (no sifting needed). 1/4 sift down 1 level, 1/8 sift down 2 levels, etc. Sum: n(1/2 + 2/4 + 3/8 + ...) = O(n)."
+    },
+    {
+      "front": "What is the time complexity of Dijkstra's algorithm?",
+      "back": "O((V + E) log V) with binary heap. O(V² + E) with array. O(V log V + E) with Fibonacci heap."
+    },
+    {
+      "front": "What is the difference between O(n²) and O(n log n) at scale?",
+      "back": "At n = 1,000,000: O(n²) = 10^12 operations (hours). O(n log n) = 20,000,000 operations (milliseconds). ~50,000x faster.",
+      "visual": "visuals/growth-curves.png"
+    },
+    {
+      "front": "What is tail recursion and why does it matter for space complexity?",
+      "back": "Tail recursion: recursive call is the last operation. Can be optimized to O(1) space by reusing stack frame. Python does NOT optimize tail calls, so still O(n) space."
+    },
+    {
+      "front": "What is the time complexity of generating all subsets of a set?",
+      "back": "O(n × 2^n). There are 2^n subsets, and generating/storing each takes O(n) time."
+    }
+  ]
+}

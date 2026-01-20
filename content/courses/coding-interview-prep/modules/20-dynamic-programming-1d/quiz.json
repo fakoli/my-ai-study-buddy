@@ -1,0 +1,136 @@
+{
+  "questions": [
+    {
+      "question": "What is the recurrence relation for the House Robber problem?",
+      "options": [
+        "dp[i] = dp[i-1] + nums[i]",
+        "dp[i] = max(dp[i-1], dp[i-2] + nums[i])",
+        "dp[i] = min(dp[i-1], dp[i-2]) + nums[i]",
+        "dp[i] = dp[i-1] + dp[i-2]"
+      ],
+      "correct_index": 1,
+      "explanation": "At each house, we choose to either skip it (take dp[i-1]) or rob it (take dp[i-2] + nums[i], since we can't rob adjacent houses)."
+    },
+    {
+      "question": "Why is Climbing Stairs essentially the Fibonacci sequence?",
+      "options": [
+        "Both have the same time complexity",
+        "Both use the recurrence dp[i] = dp[i-1] + dp[i-2]",
+        "Both start with base case 0",
+        "They aren't related"
+      ],
+      "correct_index": 1,
+      "explanation": "To reach step i, you can come from step i-1 (one step) or step i-2 (two steps). Total ways = ways to reach i-1 + ways to reach i-2, which is exactly Fibonacci."
+    },
+    {
+      "question": "In Coin Change 2 (count ways), why do we loop through coins in the outer loop?",
+      "options": [
+        "It's faster",
+        "It avoids counting duplicate permutations",
+        "It uses less memory",
+        "The order doesn't matter"
+      ],
+      "correct_index": 1,
+      "explanation": "Processing each coin type completely before moving to the next ensures we only count each combination once. Looping amounts first would count [1,2] and [2,1] as different ways."
+    },
+    {
+      "question": "What is the time complexity of the O(n log n) LIS algorithm?",
+      "options": [
+        "O(n) because we only traverse the array once",
+        "O(n log n) because we do binary search for each element",
+        "O(n²) because we compare all pairs",
+        "O(log n) because we use binary search"
+      ],
+      "correct_index": 1,
+      "explanation": "We iterate through n elements, and for each element, we perform a binary search in O(log n) time to find its position in the tails array."
+    },
+    {
+      "question": "For the Word Break problem, what does dp[i] represent?",
+      "options": [
+        "The number of words that can fit in s[0:i]",
+        "Whether s[0:i] can be segmented into dictionary words",
+        "The longest word in s[0:i]",
+        "The minimum words needed to segment s[0:i]"
+      ],
+      "correct_index": 1,
+      "explanation": "dp[i] is a boolean indicating whether the prefix s[0:i] can be completely segmented into words from the dictionary."
+    },
+    {
+      "question": "In Maximum Subarray (Kadane's algorithm), what decision do we make at each element?",
+      "options": [
+        "Include or exclude the element from the final answer",
+        "Start a new subarray or extend the current one",
+        "Use dynamic programming or greedy",
+        "Sort or don't sort the array"
+      ],
+      "correct_index": 1,
+      "explanation": "At each element, we decide: is it better to start fresh with just this element, or extend the previous subarray? We take max(num, max_ending_here + num)."
+    },
+    {
+      "question": "What is wrong with this Decode Ways solution for input '01'?\n\nif s[i-1] != '0': dp[i] += dp[i-1]",
+      "options": [
+        "Nothing is wrong",
+        "It should also check if the first character is '0'",
+        "The condition should be s[i-1] == '0'",
+        "It needs to handle two-digit numbers"
+      ],
+      "correct_index": 1,
+      "explanation": "A string starting with '0' (like '01') is invalid because '0' cannot be decoded. We need to check if s[0] == '0' at the beginning and return 0."
+    },
+    {
+      "question": "How do you optimize House Robber from O(n) space to O(1) space?",
+      "options": [
+        "Use recursion instead",
+        "Only store the last two values instead of the full dp array",
+        "Use bit manipulation",
+        "It cannot be optimized further"
+      ],
+      "correct_index": 1,
+      "explanation": "Since dp[i] only depends on dp[i-1] and dp[i-2], we only need two variables (prev1, prev2) instead of a full array."
+    },
+    {
+      "question": "For Jump Game, when can we use greedy instead of DP?",
+      "options": [
+        "Never, DP is always required",
+        "When we only need to know if we can reach the end, not the minimum jumps",
+        "When the array is sorted",
+        "When all values are positive"
+      ],
+      "correct_index": 1,
+      "explanation": "For the 'can we reach?' variant, greedy works: track max_reach and check if each position is reachable. For 'minimum jumps', we need DP or BFS."
+    },
+    {
+      "question": "What should dp[0] be in the Coin Change (minimum coins) problem?",
+      "options": [
+        "1 - one coin needed for amount 0",
+        "0 - zero coins needed for amount 0",
+        "infinity - impossible to make 0",
+        "-1 - invalid amount"
+      ],
+      "correct_index": 1,
+      "explanation": "dp[0] = 0 because it takes 0 coins to make amount 0. This is the base case that allows us to build up solutions for larger amounts."
+    },
+    {
+      "question": "Why do we track both max and min in Maximum Product Subarray?",
+      "options": [
+        "To handle empty arrays",
+        "Because a negative number can turn a minimum into a maximum",
+        "To improve time complexity",
+        "To handle zeros"
+      ],
+      "correct_index": 1,
+      "explanation": "A negative number multiplied by the current minimum (which might be negative) could become the new maximum. We track both to handle sign changes correctly."
+    },
+    {
+      "question": "What is the key insight for the O(n log n) LIS solution?",
+      "options": [
+        "Sort the array first",
+        "Maintain smallest tail element for each LIS length",
+        "Use divide and conquer",
+        "Convert to a graph problem"
+      ],
+      "correct_index": 1,
+      "explanation": "We maintain a 'tails' array where tails[i] is the smallest ending element of all increasing subsequences of length i+1. This allows binary search for each new element."
+    }
+  ]
+}

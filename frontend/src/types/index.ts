@@ -301,3 +301,332 @@ export interface ExamplesRequest {
 export interface SimplifyRequest {
   content: string;
 }
+
+// ============================================
+// Learning Paths & Course Authoring Types
+// ============================================
+
+// Course types
+export type CourseDifficulty = 'beginner' | 'intermediate' | 'advanced';
+export type CourseVisibility = 'private' | 'unlisted' | 'public';
+export type CourseSource = 'filesystem' | 'database';
+
+export interface CourseInstructions {
+  purpose: string;
+  target_audience: string;
+  learning_objectives: string[];
+  tone: string;
+  additional_context?: string;
+}
+
+export interface Course {
+  id: string;
+  title: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  difficulty: CourseDifficulty;
+  tags: string[];
+  visibility: CourseVisibility;
+  source: CourseSource;
+  author_id: string;
+  author_name: string;
+  ai_enabled: boolean;
+  instructions: CourseInstructions | null;
+  times_added: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CourseResponse extends Course {
+  module_count: number;
+}
+
+export interface CourseCreate {
+  title: string;
+  description?: string;
+  thumbnail_url?: string;
+  difficulty?: CourseDifficulty;
+  tags?: string[];
+  visibility?: CourseVisibility;
+  ai_enabled?: boolean;
+  instructions?: CourseInstructions;
+}
+
+export interface CourseUpdate {
+  title?: string;
+  description?: string;
+  thumbnail_url?: string;
+  difficulty?: CourseDifficulty;
+  tags?: string[];
+  visibility?: CourseVisibility;
+  ai_enabled?: boolean;
+  instructions?: CourseInstructions;
+}
+
+export interface CourseDiscoveryFilters {
+  q?: string;
+  tags?: string[];
+  difficulty?: CourseDifficulty;
+  author_id?: string;
+  sort?: 'popular' | 'newest' | 'alphabetical';
+  page?: number;
+  limit?: number;
+}
+
+export interface CourseDiscoveryResponse {
+  courses: CourseResponse[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface CourseWithModulesResponse {
+  course: Course;
+  modules: ModuleSummary[];
+}
+
+// Module types
+export interface FlashcardData {
+  front: string;
+  back: string;
+  visual?: string;
+}
+
+export interface QuizQuestionData {
+  question: string;
+  options: string[];
+  correct_index: number;
+  explanation?: string;
+}
+
+export interface QuizData {
+  questions: QuizQuestionData[];
+}
+
+export interface Module {
+  id: string;
+  course_id: string;
+  title: string;
+  order_index: number;
+  content_markdown: string;
+  flashcards: FlashcardData[];
+  quiz: QuizData | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ModuleSummary {
+  id: string;
+  title: string;
+  order_index: number;
+  flashcard_count: number;
+  has_quiz: boolean;
+}
+
+export interface ModuleCreate {
+  title: string;
+  order_index: number;
+  content_markdown?: string;
+  flashcards?: FlashcardData[];
+  quiz?: QuizData;
+}
+
+export interface ModuleUpdate {
+  title?: string;
+  order_index?: number;
+  content_markdown?: string;
+  flashcards?: FlashcardData[];
+  quiz?: QuizData;
+}
+
+// Learning Path types
+export interface LearningPath {
+  id: string;
+  owner_id: string;
+  title: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  difficulty: CourseDifficulty;
+  estimated_hours: number | null;
+  course_ids: string[];
+  visibility: CourseVisibility;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LearningPathResponse extends LearningPath {
+  course_count: number;
+}
+
+export interface LearningPathWithCoursesResponse {
+  path: LearningPath;
+  courses: CourseResponse[];
+}
+
+export interface LearningPathCreate {
+  title: string;
+  description?: string;
+  thumbnail_url?: string;
+  difficulty?: CourseDifficulty;
+  estimated_hours?: number;
+  course_ids?: string[];
+  visibility?: CourseVisibility;
+}
+
+export interface LearningPathUpdate {
+  title?: string;
+  description?: string;
+  thumbnail_url?: string;
+  difficulty?: CourseDifficulty;
+  estimated_hours?: number;
+  visibility?: CourseVisibility;
+}
+
+// Image upload types
+export interface ImageUploadResponse {
+  url: string;
+  filename: string;
+}
+
+// AI Generation types for courses
+export interface ModuleSuggestion {
+  title: string;
+  description: string;
+  objectives: string[];
+  suggested: boolean;
+}
+
+export interface GenerateModuleRequest {
+  prompt: string;
+  generate_flashcards?: boolean;
+  flashcard_count?: number;
+  generate_quiz?: boolean;
+  quiz_question_count?: number;
+  generate_visuals?: boolean;
+}
+
+// ============================================
+// AI Generation Types (for course authoring)
+// ============================================
+
+/** Request to suggest modules for an AI-enabled course */
+export interface SuggestModulesRequest {
+  course_id: string;
+}
+
+/** Response containing suggested modules */
+export interface SuggestModulesResponse {
+  suggestions: ModuleSuggestion[];
+  tokens_used: number;
+}
+
+/** Request to generate full module content */
+export interface GenerateModuleContentRequest {
+  course_id: string;
+  module_title: string;
+  module_prompt: string;
+  generate_flashcards?: boolean;
+  flashcard_count?: number;
+  generate_quiz?: boolean;
+  quiz_question_count?: number;
+}
+
+/** Generated module content response */
+export interface GeneratedModuleContent {
+  content_markdown: string;
+  flashcards: FlashcardData[];
+  quiz: QuizData | null;
+  suggested_visuals: string[];
+  tokens_used: number;
+}
+
+/** Request to generate flashcards from module content */
+export interface GenerateFlashcardsRequest {
+  course_id: string;
+  module_id: string;
+  count?: number;
+}
+
+/** Response containing generated flashcards */
+export interface GenerateFlashcardsResponse {
+  flashcards: FlashcardData[];
+  tokens_used: number;
+}
+
+/** Request to generate quiz from module content */
+export interface GenerateQuizRequest {
+  course_id: string;
+  module_id: string;
+  question_count?: number;
+}
+
+/** Response containing generated quiz */
+export interface GenerateQuizResponse {
+  quiz: QuizData;
+  tokens_used: number;
+}
+
+/** Visual generation style options */
+export type VisualStyle =
+  | 'educational_diagram'
+  | 'technical_illustration'
+  | 'flowchart'
+  | 'infographic'
+  | 'conceptual';
+
+/** Visual generation model options */
+export type VisualModel = 'flash' | 'pro';
+
+/** Visual aspect ratio options */
+export type VisualAspect = 'square' | 'landscape' | 'portrait';
+
+/** Request to generate a visual using AI */
+export interface GenerateVisualRequest {
+  course_id: string;
+  module_id: string;
+  description: string;
+  style?: VisualStyle;
+  model?: VisualModel;
+  aspect?: VisualAspect;
+}
+
+/** Generated visual response */
+export interface GeneratedVisual {
+  description: string;
+  local_path: string;
+  url: string;
+  markdown_reference: string;
+  tokens_used: number;
+}
+
+// ============================================
+// User API Settings Types
+// ============================================
+
+/** API provider options */
+export type APIProvider = 'anthropic' | 'gemini';
+
+/** User API settings response (without exposing the actual key) */
+export interface UserAPISettingsResponse {
+  id: string;
+  user_id: string;
+  provider: APIProvider;
+  key_hint: string;
+  is_valid: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Request to set/update an API key */
+export interface UserAPISettingsCreate {
+  provider: APIProvider;
+  api_key: string;
+}
+
+/** Response from API key validation */
+export interface UserAPISettingsValidateResponse {
+  provider: APIProvider;
+  is_valid: boolean;
+  message: string;
+}

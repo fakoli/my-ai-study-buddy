@@ -1,0 +1,126 @@
+{
+  "questions": [
+    {
+      "question": "What is the time complexity of BFS on a graph with V vertices and E edges?",
+      "options": ["O(V)", "O(E)", "O(V + E)", "O(V × E)"],
+      "correct_index": 2,
+      "explanation": "BFS visits each vertex once (O(V)) and explores each edge once (O(E)). Total: O(V + E)."
+    },
+    {
+      "question": "When should you mark a node as visited in BFS?",
+      "options": [
+        "When dequeuing the node",
+        "When enqueueing the node",
+        "After processing all neighbors",
+        "It doesn't matter"
+      ],
+      "correct_index": 1,
+      "explanation": "Mark as visited when enqueueing to prevent adding the same node multiple times. Marking when dequeuing can cause duplicate processing and worse complexity."
+    },
+    {
+      "question": "What data structure is used for BFS traversal?",
+      "options": ["Stack", "Queue", "Heap", "Array"],
+      "correct_index": 1,
+      "explanation": "BFS uses a Queue (FIFO) to process nodes level by level, ensuring all nodes at distance d are visited before nodes at distance d+1."
+    },
+    {
+      "question": "How do you detect a cycle in a directed graph using DFS?",
+      "options": [
+        "Check if any node is visited twice",
+        "Track parent node and check for back edges",
+        "Use three states and detect if we revisit a node in the current path",
+        "Count the number of edges vs vertices"
+      ],
+      "correct_index": 2,
+      "explanation": "Use three states: unvisited, in-current-path, completed. If we encounter a node that's in-current-path during DFS, we found a cycle."
+    },
+    {
+      "question": "What is the space complexity of adjacency matrix vs adjacency list?",
+      "options": [
+        "Both O(V + E)",
+        "Matrix: O(V²), List: O(V + E)",
+        "Matrix: O(V + E), List: O(V²)",
+        "Both O(V²)"
+      ],
+      "correct_index": 1,
+      "explanation": "Adjacency matrix uses a V×V 2D array = O(V²). Adjacency list stores each vertex and its edges = O(V + E)."
+    },
+    {
+      "question": "Why does BFS find the shortest path in unweighted graphs?",
+      "options": [
+        "Because it uses a queue",
+        "Because it explores all nodes at distance d before distance d+1",
+        "Because it marks nodes as visited",
+        "BFS doesn't find shortest paths"
+      ],
+      "correct_index": 1,
+      "explanation": "BFS explores level by level. When we first reach a node, it's via the shortest path because all shorter paths (smaller distances) have already been explored."
+    },
+    {
+      "question": "In Number of Islands, why do we mark cells as visited by changing them to '0'?",
+      "options": [
+        "To count the islands",
+        "To prevent revisiting the same cell in the current or future DFS calls",
+        "Because the problem requires it",
+        "To improve time complexity"
+      ],
+      "correct_index": 1,
+      "explanation": "Marking visited cells prevents counting the same island multiple times and ensures each cell is processed only once, maintaining O(rows × cols) complexity."
+    },
+    {
+      "question": "What is a bipartite graph?",
+      "options": [
+        "A graph with two connected components",
+        "A graph that can be colored with two colors such that no adjacent nodes share a color",
+        "A graph with even number of vertices",
+        "A directed graph with no cycles"
+      ],
+      "correct_index": 1,
+      "explanation": "A bipartite graph can be divided into two sets where every edge connects a node from one set to the other. Equivalently, it can be 2-colored with no adjacent same-color nodes."
+    },
+    {
+      "question": "What is the key difference between cycle detection in directed vs undirected graphs?",
+      "options": [
+        "Directed uses BFS, undirected uses DFS",
+        "Directed uses three states, undirected tracks parent to avoid false positives",
+        "They use the same algorithm",
+        "Undirected graphs cannot have cycles"
+      ],
+      "correct_index": 1,
+      "explanation": "In undirected graphs, an edge back to the parent isn't a cycle. We track parent to distinguish real back edges from the edge we came from."
+    },
+    {
+      "question": "When should you use adjacency matrix over adjacency list?",
+      "options": [
+        "When the graph is sparse",
+        "When you need to check if an edge exists in O(1) time",
+        "When memory is limited",
+        "Always, it's better"
+      ],
+      "correct_index": 1,
+      "explanation": "Adjacency matrix allows O(1) edge existence check. Use it for dense graphs or when you frequently need to check if specific edges exist."
+    },
+    {
+      "question": "What is multi-source BFS?",
+      "options": [
+        "BFS that finds multiple paths",
+        "BFS starting from multiple nodes simultaneously",
+        "BFS on multiple graphs",
+        "BFS with multiple queues"
+      ],
+      "correct_index": 1,
+      "explanation": "Multi-source BFS initializes the queue with multiple starting nodes. It expands from all sources simultaneously, useful for problems like 'minimum distance to any source'."
+    },
+    {
+      "question": "What is the advantage of bidirectional BFS?",
+      "options": [
+        "It uses less memory",
+        "It reduces search space from O(b^d) to O(b^(d/2))",
+        "It always finds multiple paths",
+        "It works on weighted graphs"
+      ],
+      "correct_index": 1,
+      "explanation": "By searching from both start and end, each search only goes halfway. The search space grows exponentially with depth, so this can be a significant speedup."
+    }
+  ]
+}

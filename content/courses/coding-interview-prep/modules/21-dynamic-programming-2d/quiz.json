@@ -1,0 +1,136 @@
+{
+  "questions": [
+    {
+      "question": "What does dp[i][j] represent in the LCS problem?",
+      "options": [
+        "Length of longest common substring ending at i and j",
+        "Length of LCS of text1[0:i] and text2[0:j]",
+        "Whether text1[i] equals text2[j]",
+        "Minimum operations to match text1[0:i] with text2[0:j]"
+      ],
+      "correct_index": 1,
+      "explanation": "dp[i][j] represents the length of the longest common subsequence considering the first i characters of text1 and first j characters of text2."
+    },
+    {
+      "question": "In Edit Distance, if word1[i-1] == word2[j-1], what is dp[i][j]?",
+      "options": [
+        "dp[i-1][j-1] + 1",
+        "dp[i-1][j-1]",
+        "min(dp[i-1][j], dp[i][j-1]) + 1",
+        "1"
+      ],
+      "correct_index": 1,
+      "explanation": "When characters match, no operation is needed. We simply take the result from converting the prefixes without these matching characters: dp[i-1][j-1]."
+    },
+    {
+      "question": "Why do we iterate capacity BACKWARDS in space-optimized 0/1 Knapsack?",
+      "options": [
+        "It's faster",
+        "To prevent using the same item multiple times",
+        "To handle negative weights",
+        "The order doesn't matter"
+      ],
+      "correct_index": 1,
+      "explanation": "Iterating backwards ensures that when we compute dp[w], we use the old value of dp[w - weight[i]] (without current item), not an already-updated value that would count the item twice."
+    },
+    {
+      "question": "What is the time complexity of the Unique Paths problem?",
+      "options": [
+        "O(m + n)",
+        "O(m × n)",
+        "O(2^(m+n))",
+        "O(m × n × max(m,n))"
+      ],
+      "correct_index": 1,
+      "explanation": "We fill an m × n grid, computing each cell in O(1) time, giving O(m × n) total time."
+    },
+    {
+      "question": "How can you find the Longest Palindromic Subsequence of string s?",
+      "options": [
+        "Find LCS of s and s reversed",
+        "Use a single DP array iterating forward",
+        "Sort the string first",
+        "Check all substrings"
+      ],
+      "correct_index": 0,
+      "explanation": "The longest subsequence that appears in both s and reverse(s) must read the same forwards and backwards, making it a palindrome."
+    },
+    {
+      "question": "In Minimum Path Sum, what are the valid moves?",
+      "options": [
+        "Up, down, left, right",
+        "Only right and down",
+        "Only diagonally",
+        "Any direction with minimum cost"
+      ],
+      "correct_index": 1,
+      "explanation": "The standard Minimum Path Sum problem only allows moving right or down, which is why the recurrence uses dp[i-1][j] (from above) and dp[i][j-1] (from left)."
+    },
+    {
+      "question": "What distinguishes Interval DP from regular 2D DP?",
+      "options": [
+        "It uses intervals instead of indices",
+        "dp[i][j] represents an interval [i,j] and builds larger intervals from smaller ones",
+        "It's always O(n³) complexity",
+        "It doesn't require base cases"
+      ],
+      "correct_index": 1,
+      "explanation": "In Interval DP, dp[i][j] represents the optimal solution for the subproblem defined by interval [i,j]. We fill by increasing interval length, combining smaller intervals."
+    },
+    {
+      "question": "What is the space complexity of standard Edit Distance?",
+      "options": [
+        "O(1)",
+        "O(n)",
+        "O(m × n)",
+        "O(m + n)"
+      ],
+      "correct_index": 2,
+      "explanation": "Standard Edit Distance uses a 2D table of size (m+1) × (n+1), giving O(m × n) space. This can be optimized to O(min(m,n))."
+    },
+    {
+      "question": "In Partition Equal Subset Sum, when can you immediately return False?",
+      "options": [
+        "When the array is empty",
+        "When the total sum is odd",
+        "When all elements are equal",
+        "When the array has only one element"
+      ],
+      "correct_index": 1,
+      "explanation": "If the total sum is odd, it's impossible to partition into two equal parts. We need sum/2 to be an integer for the problem to have a solution."
+    },
+    {
+      "question": "How do you handle obstacles in Unique Paths II?",
+      "options": [
+        "Skip obstacles during iteration",
+        "Set dp[i][j] = 0 for obstacle cells",
+        "Use BFS instead of DP",
+        "Subtract obstacle count from final answer"
+      ],
+      "correct_index": 1,
+      "explanation": "When a cell contains an obstacle, set dp[i][j] = 0 because no path can go through it. Paths must go around obstacles."
+    },
+    {
+      "question": "What is the recurrence for Unique Paths?",
+      "options": [
+        "dp[i][j] = dp[i-1][j] × dp[i][j-1]",
+        "dp[i][j] = dp[i-1][j] + dp[i][j-1]",
+        "dp[i][j] = min(dp[i-1][j], dp[i][j-1])",
+        "dp[i][j] = max(dp[i-1][j], dp[i][j-1])"
+      ],
+      "correct_index": 1,
+      "explanation": "The number of ways to reach (i,j) is the sum of ways to reach the cell above (i-1,j) and the cell to the left (i,j-1), since you can only move right or down."
+    },
+    {
+      "question": "In 0/1 Knapsack, what does dp[i][w] represent?",
+      "options": [
+        "Whether item i fits in capacity w",
+        "Maximum value using items 0 to i-1 with capacity w",
+        "Number of ways to fill capacity w",
+        "Minimum items needed for capacity w"
+      ],
+      "correct_index": 1,
+      "explanation": "dp[i][w] represents the maximum value achievable using the first i items with a knapsack capacity of w."
+    }
+  ]
+}

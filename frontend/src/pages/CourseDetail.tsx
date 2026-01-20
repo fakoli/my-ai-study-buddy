@@ -1,0 +1,337 @@
+import { useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Edit,
+  Trash2,
+  BookOpen,
+  Sparkles,
+  Plus,
+  FileText,
+  HelpCircle,
+  GripVertical,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader } from '../components/common/Card';
+import { Button } from '../components/common/Button';
+import { Modal } from '../components/common/Modal';
+import { useCourse, useDeleteCourse } from '../hooks/useCourses';
+import { useDeleteModule } from '../hooks/useModules';
+import { useToast } from '../hooks/useToast';
+import type { ModuleSummary, CourseDifficulty } from '../types';
+
+const difficultyColors: Record<CourseDifficulty, { bg: string; text: string }> = {
+  beginner: { bg: 'bg-green-100', text: 'text-green-700' },
+  intermediate: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  advanced: { bg: 'bg-red-100', text: 'text-red-700' },
+};
+
+export function CourseDetail() {
+  const { courseId } = useParams<{ courseId: string }>();
+  const navigate = useNavigate();
+  const { success, error: showError } = useToast();
+
+  const { data, isLoading, error } = useCourse(courseId || '');
+  const deleteCourse = useDeleteCourse();
+  const deleteModule = useDeleteModule();
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [moduleToDelete, setModuleToDelete] = useState<ModuleSummary | null>(null);
+
+  const handleDeleteCourse = async () => {
+    if (!courseId) return;
+    try {
+      await deleteCourse.mutateAsync(courseId);
+      success('Course deleted successfully');
+      navigate('/courses');
+    } catch (err) {
+      console.error('Failed to delete course:', err);
+      showError('Failed to delete course. Please try again.');
+    }
+  };
+
+  const handleDeleteModule = async () => {
+    if (!courseId || !moduleToDelete) return;
+    try {
+      await deleteModule.mutateAsync({ courseId, moduleId: moduleToDelete.id });
+      success('Module deleted successfully');
+      setModuleToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete module:', err);
+      showError('Failed to delete module. Please try again.');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 page-enter">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3 mb-8"></div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-semibold text-gray-900">Course not found</h2>
+        <p className="text-gray-500 mt-2">The course you're looking for doesn't exist.</p>
+        <Button variant="secondary" className="mt-4" onClick={() => navigate('/courses')}>
+          Back to Courses
+        </Button>
+      </div>
+    );
+  }
+
+  const { course, modules } = data;
+  const colors = difficultyColors[course.difficulty];
+  const isEditable = course.source === 'database';
+
+  return (
+    <div className="space-y-6 page-enter">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
+              {course.ai_enabled && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium"
+                  title="AI-Assisted Course"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  AI
+                </span>
+              )}
+            </div>
+            <p className="text-gray-500 mt-1">
+              by {course.author_name} · {modules.length} modules
+            </p>
+          </div>
+        </div>
+        {isEditable && (
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => navigate(`/courses/${courseId}/edit`)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+            <Button variant="danger" onClick={() => setDeleteModalOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Course Info */}
+      <Card>
+        <CardContent>
+          <div className="flex flex-wrap gap-4">
+            {course.description && (
+              <p className="text-gray-600 w-full">{course.description}</p>
+            )}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text}`}>
+                {course.difficulty}
+              </span>
+              {course.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-sm"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Instructions (if applicable) */}
+      {course.ai_enabled && course.instructions && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              AI Instructions
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <dl className="space-y-4">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Purpose</dt>
+                <dd className="text-gray-900">{course.instructions.purpose}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Target Audience</dt>
+                <dd className="text-gray-900">{course.instructions.target_audience}</dd>
+              </div>
+              {course.instructions.learning_objectives.length > 0 && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Learning Objectives</dt>
+                  <dd className="text-gray-900">
+                    <ul className="list-disc list-inside mt-1">
+                      {course.instructions.learning_objectives.map((obj, i) => (
+                        <li key={i}>{obj}</li>
+                      ))}
+                    </ul>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Modules */}
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Modules</h2>
+          {isEditable && (
+            <Button size="sm" onClick={() => navigate(`/courses/${courseId}/modules/new`)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add Module
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="p-0">
+          {modules.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No modules yet</p>
+              {isEditable && (
+                <Button
+                  variant="secondary"
+                  className="mt-4"
+                  onClick={() => navigate(`/courses/${courseId}/modules/new`)}
+                >
+                  Create First Module
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {modules.map((module, index) => (
+                <Link
+                  key={module.id}
+                  to={`/courses/${courseId}/modules/${module.id}`}
+                  className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="text-gray-400">
+                    <GripVertical className="w-5 h-5" />
+                  </div>
+                  <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-medium">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 truncate">{module.title}</h3>
+                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                      {module.flashcard_count > 0 && (
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-4 h-4" />
+                          {module.flashcard_count} cards
+                        </span>
+                      )}
+                      {module.has_quiz && (
+                        <span className="flex items-center gap-1">
+                          <HelpCircle className="w-4 h-4" />
+                          Quiz
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isEditable && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate(`/courses/${courseId}/modules/${module.id}/edit`);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded"
+                      >
+                        <Edit className="w-4 h-4 text-gray-400" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setModuleToDelete(module);
+                        }}
+                        className="p-2 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                      </button>
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Delete Course Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Delete Course"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to delete "{course.title}"? This will also delete all modules
+            and cannot be undone.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteCourse}
+              isLoading={deleteCourse.isPending}
+            >
+              Delete Course
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Module Modal */}
+      <Modal
+        isOpen={!!moduleToDelete}
+        onClose={() => setModuleToDelete(null)}
+        title="Delete Module"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">
+            Are you sure you want to delete "{moduleToDelete?.title}"? This cannot be undone.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <Button variant="secondary" onClick={() => setModuleToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteModule}
+              isLoading={deleteModule.isPending}
+            >
+              Delete Module
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}

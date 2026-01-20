@@ -1,0 +1,69 @@
+{
+  "cards": [
+    {
+      "front": "What is the recurrence for Longest Common Subsequence (LCS)?",
+      "back": "If chars match: dp[i][j] = dp[i-1][j-1] + 1. If not: dp[i][j] = max(dp[i-1][j], dp[i][j-1]). Match = extend diagonal; no match = take best of excluding either char.",
+      "visual": "visuals/lcs-table.png"
+    },
+    {
+      "front": "In Edit Distance, what do the three operations correspond to in the DP table?",
+      "back": "Delete from word1: dp[i-1][j] + 1. Insert into word1: dp[i][j-1] + 1. Replace: dp[i-1][j-1] + 1. When chars match, use dp[i-1][j-1] without +1."
+    },
+    {
+      "front": "How do you space-optimize 0/1 Knapsack from O(n×W) to O(W)?",
+      "back": "Use a 1D array and iterate capacity BACKWARDS: for w in range(capacity, weight-1, -1). Backwards prevents using the same item twice.",
+      "visual": "visuals/knapsack-table.png"
+    },
+    {
+      "front": "What is the base case for Unique Paths grid DP?",
+      "back": "First row and first column are all 1s. There's exactly one way to reach any cell in the first row (all right) or first column (all down).",
+      "visual": "visuals/unique-paths.png"
+    },
+    {
+      "front": "How do you find Longest Palindromic Subsequence using LCS?",
+      "back": "LPS(s) = LCS(s, reverse(s)). The longest subsequence that matches between a string and its reverse must be a palindrome."
+    },
+    {
+      "front": "What is the recurrence for Minimum Path Sum in a grid?",
+      "back": "dp[i][j] = grid[i][j] + min(dp[i-1][j], dp[i][j-1]). The minimum sum to reach (i,j) is the cell value plus the minimum of coming from above or left.",
+      "visual": "visuals/dp-2d-grid.png"
+    },
+    {
+      "front": "Why must you iterate capacity backwards in 1D knapsack optimization?",
+      "back": "Forward iteration would use updated values from the current item, allowing the same item to be used multiple times. Backwards ensures you use values from the 'previous row' (without current item)."
+    },
+    {
+      "front": "How do you check if an array can be partitioned into two equal-sum subsets?",
+      "back": "1. If total sum is odd, return False. 2. Use subset sum DP with target = sum/2. 3. If we can make sum/2, the remaining elements automatically sum to sum/2.",
+      "visual": "visuals/knapsack-table.png"
+    },
+    {
+      "front": "What is Interval DP and when is it used?",
+      "back": "DP where state is defined over intervals [i,j]. Used when combining smaller intervals into larger ones: matrix chain multiplication, palindrome partitioning, burst balloons. Fill order: by increasing interval length."
+    },
+    {
+      "front": "How do you reconstruct the actual LCS (not just length)?",
+      "back": "Backtrack from dp[m][n]: if chars match, include char and move diagonal. Otherwise, move to larger of dp[i-1][j] or dp[i][j-1]. Reverse the collected characters at the end."
+    },
+    {
+      "front": "What are the base cases for Edit Distance?",
+      "back": "dp[i][0] = i (delete i characters from word1), dp[0][j] = j (insert j characters into word1). Converting any string to/from empty string requires its length operations."
+    },
+    {
+      "front": "How do you optimize 2D DP to use O(n) space instead of O(m×n)?",
+      "back": "When dp[i][j] only depends on row i-1, use two 1D arrays (prev and curr) and swap them after each row. Sometimes even a single array works if you're careful with update order."
+    },
+    {
+      "front": "What is the difference between 0/1 Knapsack and Unbounded Knapsack?",
+      "back": "0/1: Each item used at most once. Iterate capacity backwards. Unbounded: Items can be reused. Iterate capacity forwards. The direction determines whether current item's contribution can stack."
+    },
+    {
+      "front": "In grid DP, how do you handle obstacles?",
+      "back": "If cell (i,j) has obstacle: dp[i][j] = 0 (no paths through it). Also check if start or end is blocked. Propagate zeros: if entire row/column becomes unreachable."
+    },
+    {
+      "front": "What is the time and space complexity of standard LCS?",
+      "back": "Time: O(m×n) - fill m×n table. Space: O(m×n) - the table itself. Can be optimized to O(min(m,n)) space using row-by-row technique."
+    }
+  ]
+}

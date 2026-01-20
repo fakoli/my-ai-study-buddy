@@ -1,0 +1,91 @@
+{
+  "questions": [
+    {
+      "question": "What is the time complexity of binary search?",
+      "options": ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
+      "correct_index": 1,
+      "explanation": "Binary search eliminates half the elements with each comparison. After k comparisons, n/2^k elements remain, so k = log n."
+    },
+    {
+      "question": "What is the SPACE complexity of quicksort?",
+      "options": [
+        "O(1) - it's in-place",
+        "O(log n) - average case call stack",
+        "O(n) - worst case call stack",
+        "O(log n) average, O(n) worst case"
+      ],
+      "correct_index": 3,
+      "explanation": "Quicksort is in-place but uses O(log n) stack space on average (balanced partitions) or O(n) in worst case (already sorted, bad pivot). Tail recursion optimization can reduce this."
+    },
+    {
+      "question": "What is the amortized time complexity of appending n elements to a dynamic array?",
+      "options": ["O(n²) total", "O(n) total", "O(n log n) total", "O(1) total"],
+      "correct_index": 1,
+      "explanation": "While individual appends may trigger O(n) resizing, the amortized cost per append is O(1). Total for n appends is O(n)."
+    },
+    {
+      "question": "What is the time complexity of the following code?\nresult = \"\"\nfor char in s:\n    result += char",
+      "options": ["O(n)", "O(n log n)", "O(n²)", "O(1)"],
+      "correct_index": 2,
+      "explanation": "String concatenation creates a new string each time. For a string of length n, each concatenation copies all previous characters. Total: 1 + 2 + 3 + ... + n = O(n²)."
+    },
+    {
+      "question": "What is the SPACE complexity of naive recursive Fibonacci fib(n)?",
+      "options": ["O(1)", "O(n)", "O(2^n)", "O(n²)"],
+      "correct_index": 1,
+      "explanation": "The TIME is O(2^n), but SPACE is O(n) because the maximum call stack depth is n. When one branch completes, its stack frames are reclaimed before exploring other branches."
+    },
+    {
+      "question": "For the recurrence T(n) = 2T(n/2) + O(n), what is the time complexity?",
+      "options": ["O(n)", "O(n log n)", "O(n²)", "O(2^n)"],
+      "correct_index": 1,
+      "explanation": "Using Master Theorem: a=2, b=2, d=1. Since d = log_b(a) = 1, the result is O(n^d log n) = O(n log n). This is the recurrence for merge sort."
+    },
+    {
+      "question": "What is the worst-case time complexity of hash table lookup?",
+      "options": ["O(1)", "O(log n)", "O(n)", "O(n²)"],
+      "correct_index": 2,
+      "explanation": "Worst case O(n) occurs when all keys hash to the same bucket, creating a long chain. Average case with good hash function is O(1)."
+    },
+    {
+      "question": "Why is building a heap from n elements O(n) instead of O(n log n)?",
+      "options": [
+        "Because heaps are always balanced",
+        "Because half the nodes are leaves requiring no work, and sift-down costs decrease geometrically",
+        "Because we use a faster algorithm than inserting n times",
+        "It's actually O(n log n), O(n) is a common misconception"
+      ],
+      "correct_index": 1,
+      "explanation": "Half the nodes are leaves (0 sift-down). 1/4 sift down 1 level, 1/8 sift down 2 levels, etc. The sum n×(1/2 + 2/4 + 3/8 + ...) converges to O(n)."
+    },
+    {
+      "question": "What is the time complexity of Dijkstra's algorithm with a binary heap?",
+      "options": ["O(V + E)", "O(V²)", "O((V + E) log V)", "O(V log V)"],
+      "correct_index": 2,
+      "explanation": "Each vertex is extracted once (V extractions × log V each). Each edge may trigger a decrease-key (E updates × log V each). Total: O((V + E) log V)."
+    },
+    {
+      "question": "A function runs a loop from 1 to n, and inside each iteration calls a O(log n) function. What is the total time complexity?",
+      "options": ["O(n)", "O(log n)", "O(n log n)", "O(n²)"],
+      "correct_index": 2,
+      "explanation": "n iterations × O(log n) per iteration = O(n log n). You multiply when operations are nested."
+    },
+    {
+      "question": "What is the time complexity of BFS on a graph with V vertices and E edges?",
+      "options": ["O(V)", "O(E)", "O(V + E)", "O(V × E)"],
+      "correct_index": 2,
+      "explanation": "BFS visits each vertex once (O(V)) and examines each edge once (O(E)). Total: O(V + E)."
+    },
+    {
+      "question": "You have an algorithm with O(n²) time and O(1) space. Your colleague proposes O(n) time with O(n) space. Which statement is true?",
+      "options": [
+        "The O(n) time version is always better",
+        "The O(n²) version is always better due to space efficiency",
+        "It depends on the constraints - time vs memory tradeoff",
+        "They perform identically at scale"
+      ],
+      "correct_index": 2,
+      "explanation": "This is a classic space-time tradeoff. If memory is constrained or n is small, O(n²) time with O(1) space may be preferable. For large n with available memory, O(n) time is better."
+    }
+  ]
+}

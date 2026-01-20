@@ -1,0 +1,67 @@
+{
+  "cards": [
+    {
+      "front": "What are the two key properties that indicate a problem can be solved with DP?",
+      "back": "1. Optimal substructure: optimal solution contains optimal sub-solutions. 2. Overlapping subproblems: same subproblems are solved repeatedly."
+    },
+    {
+      "front": "What is the recurrence for the House Robber problem?",
+      "back": "dp[i] = max(dp[i-1], dp[i-2] + nums[i]). Either skip house i (take dp[i-1]) or rob it (take dp[i-2] + current house value).",
+      "visual": "visuals/house-robber.png"
+    },
+    {
+      "front": "What is Kadane's algorithm for Maximum Subarray?",
+      "back": "max_ending_here = max(num, max_ending_here + num). At each position, either start a new subarray or extend the previous one. Track global maximum.",
+      "visual": "visuals/dp-1d-filling.png"
+    },
+    {
+      "front": "In Coin Change 2, why does looping coins first give combinations while looping amounts first gives permutations?",
+      "back": "Coins first: each coin type is considered once per amount, giving combinations. Amounts first: same amount can be reached via different coin orders, counting permutations."
+    },
+    {
+      "front": "What is the time complexity of the naive LIS solution vs the optimized solution?",
+      "back": "Naive: O(n²) using nested loops. Optimized: O(n log n) using binary search with a 'tails' array that tracks smallest endings for each length.",
+      "visual": "visuals/lis-visualization.png"
+    },
+    {
+      "front": "How do you optimize space from O(n) to O(1) in most 1D DP problems?",
+      "back": "If dp[i] only depends on dp[i-1] and dp[i-2], use two variables instead of an array: prev2, prev1 = prev1, prev1 + prev2"
+    },
+    {
+      "front": "What are the base cases for the Climbing Stairs problem?",
+      "back": "dp[0] = 1 (one way to stay at ground), dp[1] = 1 (one way to reach step 1). The recurrence dp[i] = dp[i-1] + dp[i-2] is identical to Fibonacci."
+    },
+    {
+      "front": "What is the recurrence for Word Break?",
+      "back": "dp[i] = any(dp[j] and s[j:i] in wordDict for j < i). Position i is reachable if there exists a valid split point j where dp[j] is True and s[j:i] is a dictionary word."
+    },
+    {
+      "front": "How does the greedy Jump Game solution work?",
+      "back": "Track max_reach (furthest index reachable). For each position i: if i > max_reach, return False. Otherwise, update max_reach = max(max_reach, i + nums[i]). O(n) time, O(1) space."
+    },
+    {
+      "front": "What edge cases must you handle in Decode Ways?",
+      "back": "1. Leading zeros ('0123') - invalid. 2. Consecutive zeros ('100') - invalid. 3. Numbers > 26 ('27') - single digit only. 4. Empty string - return 0."
+    },
+    {
+      "front": "What is the difference between Top-Down and Bottom-Up DP?",
+      "back": "Top-Down: Start from target, recurse with memoization. Easier to write. Bottom-Up: Start from base cases, iterate to target. Usually faster, easier to optimize space."
+    },
+    {
+      "front": "What signals suggest a problem might use DP?",
+      "back": "Keywords: 'minimum/maximum', 'count the number of ways', 'is it possible', 'longest/shortest'. Structure: decisions at each step, optimal substructure, overlapping subproblems."
+    },
+    {
+      "front": "For Coin Change (minimum coins), what should dp[i] be initialized to?",
+      "back": "float('inf') for all i > 0, and dp[0] = 0. Using infinity lets us use min() and detect impossible amounts (where dp[amount] remains infinity)."
+    },
+    {
+      "front": "How do you handle Maximum Product Subarray differently from Maximum Sum Subarray?",
+      "back": "Track both max and min at each position because a negative number can flip min to max. max_prod = max(num, max_prod * num, min_prod * num)."
+    },
+    {
+      "front": "What is the time and space complexity of the standard Coin Change solution?",
+      "back": "Time: O(amount × coins) - for each amount, try each coin. Space: O(amount) - the dp array."
+    }
+  ]
+}

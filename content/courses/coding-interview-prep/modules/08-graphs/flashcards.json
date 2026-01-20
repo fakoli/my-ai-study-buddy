@@ -1,0 +1,68 @@
+{
+  "cards": [
+    {
+      "front": "What is the difference between adjacency list and adjacency matrix?",
+      "back": "List: O(V+E) space, O(degree) edge check, better for sparse. Matrix: O(V²) space, O(1) edge check, better for dense graphs.",
+      "visual": "visuals/graph-representations.png"
+    },
+    {
+      "front": "When does BFS guarantee finding the shortest path?",
+      "back": "In unweighted graphs. BFS explores all nodes at distance d before distance d+1, so the first time we reach a node is via shortest path."
+    },
+    {
+      "front": "What data structure does BFS use? DFS?",
+      "back": "BFS uses a Queue (FIFO) for level-by-level exploration. DFS uses a Stack (LIFO) or recursion for deep exploration before backtracking.",
+      "visual": "visuals/bfs-traversal.png"
+    },
+    {
+      "front": "How do you detect a cycle in a directed graph?",
+      "back": "Use three states: 0=unvisited, 1=in current path, 2=completed. If you revisit a node with state 1 (still in current DFS path), there's a cycle."
+    },
+    {
+      "front": "How is cycle detection different in undirected graphs?",
+      "back": "Track the parent node. If you visit a neighbor that's already visited AND it's not the parent, you found a back edge (cycle)."
+    },
+    {
+      "front": "What is the time complexity of BFS and DFS?",
+      "back": "Both are O(V + E). We visit each vertex once and explore each edge once. V = vertices, E = edges."
+    },
+    {
+      "front": "In BFS, when should you mark a node as visited?",
+      "back": "When ENQUEUING, not when dequeuing. This prevents adding the same node multiple times to the queue and ensures O(V+E) complexity."
+    },
+    {
+      "front": "How do you check if a graph is bipartite?",
+      "back": "Try to 2-color the graph using BFS/DFS. Assign colors alternately (0 and 1). If a neighbor has the same color as current node, not bipartite.",
+      "visual": "visuals/bfs-traversal.png"
+    },
+    {
+      "front": "What is multi-source BFS?",
+      "back": "Start BFS from multiple sources simultaneously by adding all sources to queue initially. Used for problems like 'rotting oranges' or 'nearest 0'."
+    },
+    {
+      "front": "How do you convert a grid problem to a graph problem?",
+      "back": "Each cell is a node. Adjacent cells (up, down, left, right) are neighbors. Use (row, col) tuples as node identifiers."
+    },
+    {
+      "front": "What is bidirectional BFS and when is it useful?",
+      "back": "Search from both start and end simultaneously, meeting in the middle. Reduces time from O(b^d) to O(b^(d/2)) where b=branching factor, d=depth."
+    },
+    {
+      "front": "How do you find connected components in an undirected graph?",
+      "back": "Iterate through all nodes. For each unvisited node, do BFS/DFS to visit all reachable nodes (one component). Count how many times you start a new traversal."
+    },
+    {
+      "front": "What is a DAG and why is it special?",
+      "back": "Directed Acyclic Graph - directed graph with no cycles. Special because it can be topologically sorted (linear ordering respecting dependencies)."
+    },
+    {
+      "front": "How do you build a graph from an edge list in Python?",
+      "back": "Use defaultdict(list). For each (u, v), do graph[u].append(v). For undirected, also graph[v].append(u)."
+    },
+    {
+      "front": "What is the space complexity of BFS vs DFS?",
+      "back": "BFS: O(width) - queue holds entire level. DFS: O(height) - stack holds current path. In trees, BFS can be worse. In graphs, both O(V) worst case.",
+      "visual": "visuals/dfs-traversal.png"
+    }
+  ]
+}

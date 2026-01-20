@@ -10,6 +10,7 @@ A learning platform for visual learners who learn by doing. Combines flashcards,
 - **Content**: Markdown files
 - **Persistence**: JSON (local), SQLite/Supabase (production)
 - **Notifications**: Mailgun (email), SMS provider TBD
+- **AI**: Claude API (text generation), Gemini via nano-banana-pro (image generation)
 
 ## Documentation
 
@@ -119,6 +120,10 @@ All routes defined in @docs/architecture.md
 | `/api/v1/ai` | Explanations, hints, examples |
 | `/api/v1/auth` | Registration, login, tokens |
 | `/api/v1/notifications` | Preferences and delivery |
+| `/api/v1/courses` | Course CRUD and discovery |
+| `/api/v1/paths` | Learning path management |
+| `/api/v1/generate` | AI content generation |
+| `/api/v1/uploads` | Image upload and serving |
 
 ## Testing
 
@@ -137,3 +142,29 @@ All routes defined in @docs/architecture.md
 | Storage backend | `backend/storage/json_storage.py` |
 | React component | `frontend/src/components/FlashCard.tsx` |
 | Custom hook | `frontend/src/hooks/useQuiz.ts` |
+| Course model | `backend/models/course.py` |
+| AI generation | `backend/services/ai_generation_service.py` |
+| Frontend API client | `frontend/src/api/courses.ts` |
+
+## AI Generation
+
+The `AIGenerationService` provides AI-powered content generation for courses:
+
+| Endpoint | Token Cost | Purpose |
+|----------|------------|---------|
+| `POST /generate/suggest-modules` | 10 | Generate module structure from course instructions |
+| `POST /generate/module-content` | 25 | Generate markdown, flashcards, and quiz |
+| `POST /generate/flashcards` | 8 | Generate flashcards from module content |
+| `POST /generate/quiz` | 10 | Generate quiz from module content |
+| `POST /generate/visual` | 5 | Generate educational images via Gemini |
+
+### Course Instructions
+
+AI-enabled courses have `instructions` that guide all generation:
+- `purpose`: What the course is for
+- `target_audience`: Who it's designed for
+- `learning_objectives`: What learners will achieve
+- `tone`: Writing style and approach
+- `additional_context`: Extra guidance
+
+These instructions flow from course to module generation for consistent content.
