@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import {
   ArrowLeft,
   Edit,
@@ -14,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '../components/common/Card';
 import { Button } from '../components/common/Button';
+import { MarkdownRenderer } from '../components/common/MarkdownRenderer';
 import { useModule, useModules } from '../hooks/useModules';
 import { useCourse } from '../hooks/useCourses';
 
@@ -97,16 +95,16 @@ export function ModuleViewer() {
     <div className="space-y-6 page-enter">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 min-w-0 flex-1">
           <button
             onClick={() => navigate(`/courses/${courseId}`)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <p className="text-sm text-gray-500">{courseData?.course.title}</p>
-            <h1 className="text-2xl font-bold text-gray-900">{module.title}</h1>
+          <div className="min-w-0">
+            <p className="text-sm text-gray-500 truncate">{courseData?.course.title}</p>
+            <h1 className="text-2xl font-bold text-gray-900 break-words">{module.title}</h1>
           </div>
         </div>
         {isEditable && (
@@ -166,30 +164,8 @@ export function ModuleViewer() {
       {/* Content */}
       {activeTab === 'content' && (
         <Card>
-          <CardContent className="prose prose-indigo max-w-none">
-            <ReactMarkdown
-              components={{
-                code({ inline, className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  return !inline && match ? (
-                    <SyntaxHighlighter
-                      style={oneDark}
-                      language={match[1]}
-                      PreTag="div"
-                      {...props}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
-              }}
-            >
-              {module.content_markdown || '*No content yet*'}
-            </ReactMarkdown>
+          <CardContent>
+            <MarkdownRenderer content={module.content_markdown || '*No content yet*'} />
           </CardContent>
         </Card>
       )}
