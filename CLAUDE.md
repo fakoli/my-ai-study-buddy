@@ -45,25 +45,52 @@ npm run lint --prefix frontend
 
 ```
 /study-buddy
-  AGENTS.md
+  CLAUDE.md                     # This file
   /docs
-    architecture.md
-    implementation.md
+    architecture.md             # API specs, models, error codes
+    implementation.md           # Setup and coding conventions
+    quick-reference.md          # Token-efficient reference
   /backend
-    /api
-      /routes
-    /models
-    /services
+    main.py                     # FastAPI app entry
+    config.py                   # Settings and environment
+    dependencies.py             # Type aliases (StorageDep, CurrentUser, etc.)
+    exceptions.py               # Error codes and exceptions
+    /api/routes                 # 15 route files
+      admin.py                  # Admin console endpoints
+      auth.py                   # Authentication
+      courses.py                # Course management
+      modules.py                # Module management
+      generation.py             # AI content generation
+      learning_paths.py         # Learning paths
+      user_settings.py          # API key management
+      uploads.py                # Image uploads
+      ...
+    /models                     # 14 Pydantic model files
+      user.py                   # User + UserRole
+      course.py                 # Course + CourseInstructions
+      module.py                 # Module + FlashcardData + QuizData
+      learning_path.py          # Learning paths
+      token_transaction.py      # Token history
+      user_api_settings.py      # API key settings
+      ...
+    /services                   # 18 service files
+      admin_service.py          # User management
+      ai_generation_service.py  # AI content generation
+      encryption_service.py     # API key encryption
+      module_service.py         # Module operations
+      ...
     /storage
-    main.py
-  /frontend
-    /src
-      /components
-      /pages
-      /hooks
-      /api
-  /content
-    /courses
+      base.py                   # StorageBackend ABC
+      json_storage.py           # Development storage
+  /frontend/src
+    /api                        # 16 API client files
+    /hooks                      # 15 custom hooks
+    /pages                      # 15 page components
+      CourseEditor.tsx          # Course authoring
+      ModuleEditor.tsx          # Module authoring
+      Settings.tsx              # User settings + API keys
+    /components
+  /content/courses              # Filesystem-based courses
 ```
 
 ## Code Style
@@ -147,22 +174,25 @@ npm run lint --prefix frontend
 
 ## API Overview
 
-All routes defined in @docs/architecture.md
+All routes defined in @docs/architecture.md (74+ endpoints total)
 
-| Resource | Purpose |
-|----------|---------|
-| `/api/v1/decks` | Flashcard CRUD |
-| `/api/v1/reviews` | Spaced repetition tracking |
-| `/api/v1/quiz` | Quiz generation and submission |
-| `/api/v1/progress` | Stats and session history |
-| `/api/v1/references` | Reference material and visuals |
-| `/api/v1/ai` | Explanations, hints, examples |
-| `/api/v1/auth` | Registration, login, tokens |
-| `/api/v1/notifications` | Preferences and delivery |
-| `/api/v1/courses` | Course CRUD and discovery |
-| `/api/v1/paths` | Learning path management |
-| `/api/v1/generate` | AI content generation |
-| `/api/v1/uploads` | Image upload and serving |
+| Resource | Endpoints | Purpose |
+|----------|-----------|---------|
+| `/api/v1/decks` | 8 | Flashcard CRUD |
+| `/api/v1/reviews` | 3 | Spaced repetition tracking |
+| `/api/v1/quiz` | 3 | Quiz generation and submission |
+| `/api/v1/progress` | 3 | Stats and session history |
+| `/api/v1/references` | 3 | Reference material and visuals |
+| `/api/v1/ai` | 4 | Explanations, hints, examples |
+| `/api/v1/auth` | 6 | Registration, login, tokens |
+| `/api/v1/notifications` | 5 | Preferences and delivery |
+| `/api/v1/courses` | 7 | Course CRUD and discovery |
+| `/api/v1/courses/.../modules` | 7 | Module CRUD and reordering |
+| `/api/v1/paths` | 9 | Learning path management |
+| `/api/v1/generate` | 5 | AI content generation |
+| `/api/v1/uploads` | 3 | Image upload and serving |
+| `/api/v1/settings` | 4 | User API key management |
+| `/api/v1/admin` | 4 | Admin console (users, tokens) |
 
 ## Testing
 
@@ -181,9 +211,18 @@ All routes defined in @docs/architecture.md
 | Storage backend | `backend/storage/json_storage.py` |
 | React component | `frontend/src/components/FlashCard.tsx` |
 | Custom hook | `frontend/src/hooks/useQuiz.ts` |
-| Course model | `backend/models/course.py` |
-| AI generation | `backend/services/ai_generation_service.py` |
 | Frontend API client | `frontend/src/api/courses.ts` |
+| Course model | `backend/models/course.py` |
+| Module model | `backend/models/module.py` |
+| Learning path model | `backend/models/learning_path.py` |
+| AI generation service | `backend/services/ai_generation_service.py` |
+| Admin service | `backend/services/admin_service.py` |
+| Admin routes | `backend/api/routes/admin.py` |
+| Encryption service | `backend/services/encryption_service.py` |
+| Course editor page | `frontend/src/pages/CourseEditor.tsx` |
+| Module editor page | `frontend/src/pages/ModuleEditor.tsx` |
+| Admin hook | `frontend/src/hooks/useAdmin.ts` |
+| Type aliases | `backend/dependencies.py` |
 
 ## AI Generation
 
@@ -207,3 +246,30 @@ AI-enabled courses have `instructions` that guide all generation:
 - `additional_context`: Extra guidance
 
 These instructions flow from course to module generation for consistent content.
+
+## Admin Console
+
+Admin-only features for user management and token administration.
+
+### Access Control
+
+- Users with `role: "admin"` can access admin endpoints
+- Use `AdminUser` dependency for route protection
+- Regular users get 403 Forbidden
+
+### Features
+
+| Feature | Endpoint | Description |
+|---------|----------|-------------|
+| Stats | `GET /admin/stats` | Total users, admins, tokens |
+| User list | `GET /admin/users` | Paginated, searchable |
+| User detail | `GET /admin/users/{id}` | User + transaction history |
+| Token adjust | `PUT /admin/users/{id}/tokens` | Add/deduct with reason |
+
+### Token Transactions
+
+All token changes are logged with:
+- `amount`: positive (credit) or negative (debit)
+- `operation`: "admin_adjustment", "generate_content", etc.
+- `reason`: human-readable explanation
+- `admin_id`: who made the change (for admin adjustments)

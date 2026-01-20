@@ -15,6 +15,13 @@ export const modulesApi = {
   create: (courseId: string, data: ModuleCreate) =>
     api.post<Module>(`/courses/${courseId}/modules`, data),
 
+  /** Create multiple modules in a single request */
+  batchCreate: (courseId: string, modules: ModuleCreate[]) =>
+    api.post<{ created: Module[]; count: number }>(
+      `/courses/${courseId}/modules/batch`,
+      { modules }
+    ),
+
   /** Get a module by ID */
   get: (courseId: string, moduleId: string) =>
     api.get<Module>(`/courses/${courseId}/modules/${moduleId}`),

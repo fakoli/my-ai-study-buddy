@@ -94,6 +94,80 @@ Base URL: `/api/v1`
 | POST | `/notifications/test/email` | Test email delivery |
 | POST | `/notifications/test/sms` | Test SMS delivery |
 
+### Courses - Course Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/courses` | List all accessible courses |
+| GET | `/courses/mine` | List courses authored by current user |
+| GET | `/courses/discover` | Browse/search public courses (with filters) |
+| POST | `/courses` | Create new course |
+| GET | `/courses/{course_id}` | Get course with modules |
+| PUT | `/courses/{course_id}` | Update course metadata |
+| DELETE | `/courses/{course_id}` | Delete course and modules |
+
+### Modules - Course Content
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/courses/{course_id}/modules` | List modules for a course |
+| POST | `/courses/{course_id}/modules` | Create new module |
+| POST | `/courses/{course_id}/modules/batch` | Batch create modules |
+| GET | `/courses/{course_id}/modules/{module_id}` | Get module by ID |
+| PUT | `/courses/{course_id}/modules/{module_id}` | Update module |
+| DELETE | `/courses/{course_id}/modules/{module_id}` | Delete module |
+| PUT | `/courses/{course_id}/modules/reorder` | Reorder modules |
+
+### Learning Paths - Curriculum Organization
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/paths` | List accessible learning paths |
+| GET | `/paths/mine` | List paths owned by current user |
+| POST | `/paths` | Create learning path |
+| GET | `/paths/{path_id}` | Get path with courses |
+| PUT | `/paths/{path_id}` | Update path metadata |
+| DELETE | `/paths/{path_id}` | Delete learning path |
+| POST | `/paths/{path_id}/courses` | Add course to path |
+| DELETE | `/paths/{path_id}/courses/{course_id}` | Remove course from path |
+| PUT | `/paths/{path_id}/courses/reorder` | Reorder courses in path |
+
+### AI Generation - Content Creation
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/generate/suggest-modules` | Generate module structure (10 tokens) |
+| POST | `/generate/module-content` | Generate full module content (25 tokens) |
+| POST | `/generate/flashcards` | Generate flashcards (8 tokens) |
+| POST | `/generate/quiz` | Generate quiz (10 tokens) |
+| POST | `/generate/visual` | Generate educational image (5 tokens) |
+
+### Admin - User Management (Admin only)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/admin/stats` | Admin dashboard statistics |
+| GET | `/admin/users` | List all users (with search/pagination) |
+| GET | `/admin/users/{user_id}` | User details with transaction history |
+| PUT | `/admin/users/{user_id}/tokens` | Adjust user token balance |
+
+### User Settings - API Keys
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/settings/api-keys` | List configured API keys |
+| POST | `/settings/api-keys` | Set/update API key |
+| DELETE | `/settings/api-keys/{provider}` | Delete API key |
+| POST | `/settings/api-keys/{provider}/validate` | Validate stored API key |
+
+### Image Uploads
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/uploads/images/{course_id}` | Upload image file |
+| POST | `/uploads/images/{course_id}/from-url` | Download and store image from URL |
+| GET | `/uploads/courses/{course_id}/images/{filename}` | Serve uploaded image |
+
 ---
 
 ## Data Models
@@ -101,12 +175,17 @@ Base URL: `/api/v1`
 ### User
 
 ```python
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
+
 class User(BaseModel):
     id: str
-    email: str
+    email: EmailStr
     name: str
     created_at: datetime
     token_balance: int = 100
+    role: UserRole = UserRole.USER
 ```
 
 ### Deck and Card
@@ -215,33 +294,33 @@ class NotificationType(str, Enum):
 
 class NotificationPreferences(BaseModel):
     user_id: str
-    
+
     # Email
     email_enabled: bool = True
     email_address: str
-    
+
     # SMS
     sms_enabled: bool = False
     phone_number: str | None = None
-    
+
     # Scheduling
     daily_quiz_enabled: bool = True
     daily_quiz_time: str = "09:00"
     daily_quiz_channel: NotificationChannel = NotificationChannel.SMS
-    
+
     reminder_frequency: Literal["daily", "every_other_day", "weekly", "none"] = "daily"
     reminder_channel: NotificationChannel = NotificationChannel.EMAIL
-    
+
     progress_summary_enabled: bool = True
     progress_summary_day: Literal["monday", "friday", "sunday"] = "monday"
     progress_summary_channel: NotificationChannel = NotificationChannel.EMAIL
-    
+
     # Quiet hours
     quiet_hours_enabled: bool = False
     quiet_hours_start: str = "22:00"
     quiet_hours_end: str = "08:00"
     timezone: str = "America/Los_Angeles"
-    
+
     # Per-type
     send_encouragement: bool = True
     send_hints: bool = True
@@ -256,6 +335,153 @@ class NotificationRecord(BaseModel):
     delivered: bool
     delivery_status: str | None = None
 ```
+
+### Course and CourseInstructions
+
+```python
+class CourseInstructions(BaseModel):
+    purpose: str
+    target_audience: str
+    learning_objectives: list[str] = []
+    tone: str = "Technical but approachable, visual-first"
+    additional_context: str | None = None
+
+class Course(BaseModel):
+    id: str
+    title: str
+    description: str | None = None
+    thumbnail_url: str | None = None
+    difficulty: Literal["beginner", "intermediate", "advanced"] = "beginner"
+    tags: list[str] = []
+    visibility: Literal["private", "unlisted", "public"] = "private"
+    source: Literal["filesystem", "database"] = "database"
+    author_id: str
+    author_name: str
+    ai_enabled: bool = False
+    instructions: CourseInstructions | None = None
+    times_added: int = 0
+    created_at: datetime
+    updated_at: datetime
+```
+
+### Module
+
+```python
+class FlashcardData(BaseModel):
+    front: str
+    back: str
+    visual: str | None = None
+
+class QuizQuestionData(BaseModel):
+    question: str
+    options: list[str]
+    correct_index: int
+    explanation: str | None = None
+
+class QuizData(BaseModel):
+    questions: list[QuizQuestionData] = []
+
+class Module(BaseModel):
+    id: str
+    course_id: str
+    title: str
+    order_index: int
+    content_markdown: str = ""
+    flashcards: list[FlashcardData] = []
+    quiz: QuizData | None = None
+    created_at: datetime
+    updated_at: datetime
+```
+
+### Learning Path
+
+```python
+class LearningPath(BaseModel):
+    id: str
+    owner_id: str
+    title: str
+    description: str | None = None
+    thumbnail_url: str | None = None
+    difficulty: Literal["beginner", "intermediate", "advanced"] = "beginner"
+    estimated_hours: int | None = None
+    course_ids: list[str] = []
+    visibility: Literal["private", "unlisted", "public"] = "private"
+    created_at: datetime
+    updated_at: datetime
+```
+
+### Token Transaction
+
+```python
+class TokenTransaction(BaseModel):
+    id: str
+    user_id: str
+    amount: int  # positive = credit, negative = debit
+    balance_after: int
+    operation: str  # "admin_adjustment", "generate_content", etc.
+    reason: str | None = None
+    admin_id: str | None = None
+    created_at: datetime
+```
+
+### User API Settings
+
+```python
+class UserAPISettings(BaseModel):
+    id: str
+    user_id: str
+    provider: Literal["anthropic", "gemini"]
+    encrypted_api_key: str
+    key_hint: str  # Last 4 characters
+    is_valid: bool = True
+    created_at: datetime
+    updated_at: datetime
+```
+
+---
+
+## Error Codes
+
+All API errors return a structured JSON response:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable message",
+    "details": {}
+  }
+}
+```
+
+### Error Code Reference
+
+| Category | Code | HTTP Status | Description |
+|----------|------|-------------|-------------|
+| **General** | `VALIDATION_ERROR` | 422 | Request validation failed |
+| | `INTERNAL_ERROR` | 500 | Server error |
+| **Auth** | `UNAUTHORIZED` | 401 | Missing/invalid auth |
+| | `INVALID_TOKEN` | 401 | JWT token invalid/expired |
+| | `INVALID_CREDENTIALS` | 401 | Wrong email/password |
+| **Access** | `FORBIDDEN` | 403 | Permission denied |
+| | `ACCESS_DENIED` | 403 | Resource access denied |
+| **Resources** | `NOT_FOUND` | 404 | Generic not found |
+| | `DECK_NOT_FOUND` | 404 | Deck doesn't exist |
+| | `CARD_NOT_FOUND` | 404 | Card doesn't exist |
+| | `QUIZ_NOT_FOUND` | 404 | Quiz doesn't exist |
+| | `USER_NOT_FOUND` | 404 | User doesn't exist |
+| | `COURSE_NOT_FOUND` | 404 | Course doesn't exist |
+| | `MODULE_NOT_FOUND` | 404 | Module doesn't exist |
+| | `LEARNING_PATH_NOT_FOUND` | 404 | Learning path doesn't exist |
+| **Authoring** | `COURSE_NOT_EDITABLE` | 403 | User can't edit this course |
+| | `INVALID_MODULE_ORDER` | 400 | Invalid module ordering |
+| | `IMAGE_DOWNLOAD_FAILED` | 400 | Failed to download image |
+| | `INVALID_IMAGE_FORMAT` | 400 | Unsupported image format |
+| **Conflict** | `CONFLICT` | 409 | Resource conflict |
+| | `EMAIL_ALREADY_EXISTS` | 409 | Email already registered |
+| **Tokens** | `INSUFFICIENT_TOKENS` | 402 | Not enough tokens |
+| **AI** | `AI_SERVICE_ERROR` | 503 | AI service failed |
+| | `AI_SERVICE_UNAVAILABLE` | 503 | AI service offline |
 
 ---
 
@@ -325,16 +551,16 @@ Abstraction allows swapping storage backends via environment configuration.
 class StorageBackend(ABC):
     @abstractmethod
     async def get(self, collection: str, id: str) -> dict | None: ...
-    
+
     @abstractmethod
     async def list(self, collection: str, filters: dict = None) -> list[dict]: ...
-    
+
     @abstractmethod
     async def create(self, collection: str, data: dict) -> dict: ...
-    
+
     @abstractmethod
     async def update(self, collection: str, id: str, data: dict) -> dict: ...
-    
+
     @abstractmethod
     async def delete(self, collection: str, id: str) -> bool: ...
 ```
@@ -415,7 +641,7 @@ Daily quiz format:
 ```
 📚 Daily Quiz: What does len() return?
 A) The type
-B) The length  
+B) The length
 C) The value
 
 Reply A, B, or C

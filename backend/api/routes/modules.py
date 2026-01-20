@@ -30,6 +30,12 @@ class ReorderModulesRequest(BaseModel):
     module_ids: list[str]
 
 
+class BatchModuleCreateRequest(BaseModel):
+    """Request to batch create modules."""
+
+    modules: list[ModuleCreate]
+
+
 @router.get("/{course_id}/modules", response_model=list[ModuleSummary])
 async def list_modules(
     course_id: str,
@@ -55,6 +61,18 @@ async def create_module(
         )
 
     return await module_service.create_module(course_id, user.id, module_data)
+
+
+@router.post("/{course_id}/modules/batch")
+async def batch_create_modules(
+    course_id: str,
+    data: BatchModuleCreateRequest,
+    user: CurrentUser,
+    module_service: ModuleService = Depends(get_module_service),
+):
+    """Create multiple modules in a single request."""
+    created = await module_service.batch_create_modules(course_id, user.id, data.modules)
+    return {"created": created, "count": len(created)}
 
 
 @router.get("/{course_id}/modules/{module_id}", response_model=Module)

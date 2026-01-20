@@ -34,6 +34,20 @@ export function useCreateModule() {
   });
 }
 
+/** Create multiple modules in a single request */
+export function useBatchCreateModules() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ courseId, modules }: { courseId: string; modules: ModuleCreate[] }) =>
+      modulesApi.batchCreate(courseId, modules),
+    onSuccess: (_, { courseId }) => {
+      queryClient.invalidateQueries({ queryKey: ['modules', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+    },
+  });
+}
+
 /** Update a module */
 export function useUpdateModule() {
   const queryClient = useQueryClient();

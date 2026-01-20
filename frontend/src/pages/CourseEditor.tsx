@@ -11,19 +11,25 @@ import {
   Plus,
   Trash2,
   GripVertical,
+  Loader2,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '../components/common/Card';
+import { Card, CardContent } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Textarea } from '../components/common/Textarea';
+import { Modal } from '../components/common/Modal';
 import {
   useCourse,
   useCreateCourse,
   useUpdateCourse,
 } from '../hooks/useCourses';
-import { useSuggestModules } from '../hooks/useGeneration';
+import { useBatchCreateModules, useDeleteModule, useModules } from '../hooks/useModules';
+import { useSuggestModules, useGenerateModuleContent } from '../hooks/useGeneration';
+import { modulesApi } from '../api/modules';
+import { ApiError } from '../api/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../hooks/useToast';
-import type { CourseDifficulty, CourseInstructions, CourseCreate, CourseUpdate, ModuleSuggestion } from '../types';
+import type { CourseDifficulty, CourseInstructions, CourseCreate, CourseUpdate, ModuleSuggestion, ModuleCreate } from '../types';
 
 type Step = 'info' | 'instructions' | 'modules';
 
@@ -47,9 +53,12 @@ export function CourseEditor() {
 
   // Fetch existing course data if editing
   const { data: existingCourse, isLoading: loadingCourse } = useCourse(courseId || '');
+  const { data: existingModules } = useModules(courseId || '');
   const createCourse = useCreateCourse();
   const updateCourse = useUpdateCourse();
   const suggestModules = useSuggestModules();
+  const batchCreateModules = useBatchCreateModules();
+  const deleteModule = useDeleteModule();
 
   // Step state
   const [currentStep, setCurrentStep] = useState<Step>('info');
@@ -73,6 +82,23 @@ export function CourseEditor() {
 
   // Module outlines state
   const [moduleOutlines, setModuleOutlines] = useState<ModuleOutline[]>([]);
+
+  // AI Suggestion Modal state
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<ModuleSuggestion[]>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
+  const [suggestionMode, setSuggestionMode] = useState<'add' | 'replace' | null>(null);
+  const [isCreatingModules, setIsCreatingModules] = useState(false);
+
+  // Generation options state
+  const [generateContent, setGenerateContent] = useState(true);
+  const [flashcardCount, setFlashcardCount] = useState(15);
+  const [quizQuestionCount, setQuizQuestionCount] = useState(10);
+  const [generationProgress, setGenerationProgress] = useState<{current: number; total: number} | null>(null);
+
+  // Additional hooks for content generation
+  const queryClient = useQueryClient();
+  const generateModuleContent = useGenerateModuleContent();
 
   // Populate form when editing
   useEffect(() => {
@@ -185,30 +211,203 @@ export function CourseEditor() {
         course_id: courseId,
       });
 
-      // Convert suggestions to module outlines
-      const newModules: ModuleOutline[] = result.suggestions.map((suggestion, index) => ({
-        id: `suggested-${Date.now()}-${index}`,
-        title: suggestion.title,
-        description: suggestion.description,
-      }));
+      // Store suggestions and open modal
+      setAiSuggestions(result.suggestions);
+      setSelectedSuggestions(new Set(result.suggestions.map((_, i) => i)));
 
-      if (moduleOutlines.length > 0) {
-        const shouldReplace = window.confirm(
-          'Replace existing modules with suggestions? Click Cancel to append instead.'
-        );
-        if (shouldReplace) {
-          setModuleOutlines(newModules);
-        } else {
-          setModuleOutlines([...moduleOutlines, ...newModules]);
-        }
+      // If there are existing modules, we need to ask about mode
+      // Otherwise, just go straight to selection
+      if (existingModules && existingModules.length > 0) {
+        setSuggestionMode(null); // Will prompt for mode choice
       } else {
-        setModuleOutlines(newModules);
+        setSuggestionMode('add'); // No existing modules, just add
       }
 
-      success(`Generated ${result.suggestions.length} module suggestions! Used ${result.tokens_used} tokens.`);
+      setShowSuggestionModal(true);
+      success(`Generated ${result.suggestions.length} suggestions! Used ${result.tokens_used} tokens.`);
     } catch (err) {
       console.error('Failed to suggest modules:', err);
       showError('Failed to generate module suggestions. Please try again.');
+    }
+  };
+
+  const handleToggleSuggestion = (index: number) => {
+    const newSelected = new Set(selectedSuggestions);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedSuggestions(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedSuggestions(new Set(aiSuggestions.map((_, i) => i)));
+  };
+
+  const handleSelectNone = () => {
+    setSelectedSuggestions(new Set());
+  };
+
+  const handleConfirmSuggestions = async () => {
+    if (!courseId || selectedSuggestions.size === 0) return;
+
+    setIsCreatingModules(true);
+
+    try {
+      // Delete existing modules if replacing
+      if (suggestionMode === 'replace' && existingModules && existingModules.length > 0) {
+        for (const module of existingModules) {
+          await deleteModule.mutateAsync({ courseId, moduleId: module.id });
+        }
+      }
+
+      const startIndex = suggestionMode === 'replace' ? 0 : (existingModules?.length || 0);
+
+      // Get selected suggestions in order
+      const selectedList = aiSuggestions.filter((_, idx) => selectedSuggestions.has(idx));
+
+      if (generateContent) {
+        // Generate and create modules one by one
+        setGenerationProgress({ current: 0, total: selectedList.length });
+        const createdModules: ModuleOutline[] = [];
+        let stoppedDueToTokens = false;
+
+        for (let i = 0; i < selectedList.length; i++) {
+          const suggestion = selectedList[i];
+          setGenerationProgress({ current: i + 1, total: selectedList.length });
+
+          try {
+            // Generate content for this module
+            const generated = await generateModuleContent.mutateAsync({
+              course_id: courseId,
+              module_title: suggestion.title,
+              module_prompt: `${suggestion.description}\n\nObjectives:\n${suggestion.objectives.map(o => `- ${o}`).join('\n')}`,
+              generate_flashcards: true,
+              flashcard_count: flashcardCount,
+              generate_quiz: true,
+              quiz_question_count: quizQuestionCount,
+            });
+
+            // Create module with generated content
+            const moduleData: ModuleCreate = {
+              title: suggestion.title,
+              order_index: startIndex + i,
+              content_markdown: generated.content_markdown,
+              flashcards: generated.flashcards,
+              quiz: generated.quiz || undefined,
+            };
+
+            const createdModule = await modulesApi.create(courseId, moduleData);
+            createdModules.push({
+              id: createdModule.id,
+              title: createdModule.title,
+              description: suggestion.description,
+            });
+          } catch (err: unknown) {
+            console.error(`Failed to generate module ${suggestion.title}:`, err);
+
+            // Check if it's an insufficient tokens error (402)
+            // Use multiple detection methods for robustness
+            let isTokenError = false;
+
+            if (err instanceof ApiError) {
+              isTokenError = err.status === 402;
+            } else if (err && typeof err === 'object') {
+              // Fallback: check for status property directly (in case instanceof doesn't work due to transpilation)
+              const errObj = err as { status?: number; name?: string };
+              isTokenError = errObj.status === 402 || errObj.name === 'ApiError' && 'status' in errObj && errObj.status === 402;
+            }
+
+            console.log('Error details:', {
+              errorType: err?.constructor?.name,
+              isApiError: err instanceof ApiError,
+              hasStatus: err && typeof err === 'object' && 'status' in err,
+              status: err && typeof err === 'object' && 'status' in err ? (err as { status: number }).status : 'N/A',
+              isTokenError
+            });
+
+            if (isTokenError) {
+              stoppedDueToTokens = true;
+              break; // Stop trying - all subsequent calls will also fail
+            }
+            // For other errors, continue with next module
+          }
+        }
+
+        // Invalidate queries to refresh module list
+        queryClient.invalidateQueries({ queryKey: ['modules', courseId] });
+        queryClient.invalidateQueries({ queryKey: ['course', courseId] });
+
+        // Update local module outlines with actually created modules
+        console.log('Generation complete:', { createdCount: createdModules.length, stoppedDueToTokens, totalRequested: selectedList.length });
+
+        if (createdModules.length > 0) {
+          if (suggestionMode === 'replace') {
+            setModuleOutlines(createdModules);
+          } else {
+            setModuleOutlines([...moduleOutlines, ...createdModules]);
+          }
+
+          if (stoppedDueToTokens) {
+            success(`Created ${createdModules.length} of ${selectedList.length} modules with content (stopped due to insufficient tokens).`);
+          } else {
+            success(`Created ${createdModules.length} modules with content!`);
+          }
+          handleCloseSuggestionModal();
+        } else if (stoppedDueToTokens) {
+          // No modules created due to token shortage
+          console.log('Showing token error toast');
+          showError('Insufficient tokens. You need at least 25 tokens per module. Please add more tokens and try again.');
+        } else {
+          console.log('Showing general error toast');
+          showError('Failed to create any modules. Please try again.');
+        }
+
+      } else {
+        // Create empty modules via batch (existing logic)
+        const modulesToCreate: ModuleCreate[] = selectedList.map((suggestion, i) => ({
+          title: suggestion.title,
+          order_index: startIndex + i,
+          content_markdown: '',
+          flashcards: [],
+          quiz: undefined,
+        }));
+
+        const result = await batchCreateModules.mutateAsync({ courseId, modules: modulesToCreate });
+
+        // Update local module outlines
+        const newOutlines: ModuleOutline[] = result.created.map((m) => ({
+          id: m.id,
+          title: m.title,
+          description: '',
+        }));
+
+        if (suggestionMode === 'replace') {
+          setModuleOutlines(newOutlines);
+        } else {
+          setModuleOutlines([...moduleOutlines, ...newOutlines]);
+        }
+
+        success(`Created ${result.count} modules!`);
+        handleCloseSuggestionModal();
+      }
+
+    } catch (err) {
+      console.error('Failed to create modules:', err);
+      showError('Failed to create modules. Please try again.');
+    } finally {
+      setIsCreatingModules(false);
+      setGenerationProgress(null);
+    }
+  };
+
+  const handleCloseSuggestionModal = () => {
+    if (!isCreatingModules) {
+      setShowSuggestionModal(false);
+      setAiSuggestions([]);
+      setSelectedSuggestions(new Set());
+      setSuggestionMode(null);
     }
   };
 
@@ -771,6 +970,187 @@ export function CourseEditor() {
           )}
         </div>
       </div>
+
+      {/* AI Suggestion Modal */}
+      <Modal
+        isOpen={showSuggestionModal}
+        onClose={handleCloseSuggestionModal}
+        title="AI Module Suggestions"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {/* Mode selection - only show if modules exist and mode not chosen */}
+          {existingModules && existingModules.length > 0 && suggestionMode === null && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">
+                You have {existingModules.length} existing module{existingModules.length !== 1 ? 's' : ''}.
+                What would you like to do with the AI suggestions?
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => setSuggestionMode('add')}
+                  className="flex-1"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add to Existing
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setSuggestionMode('replace')}
+                  className="flex-1 text-amber-700 border-amber-300 hover:bg-amber-50"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Replace All
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Suggestion selection - show after mode is chosen */}
+          {suggestionMode !== null && (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Select which modules to create:
+                </p>
+                <div className="flex gap-2 text-sm">
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="text-indigo-600 hover:text-indigo-800 underline"
+                  >
+                    Select All
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button
+                    type="button"
+                    onClick={handleSelectNone}
+                    className="text-indigo-600 hover:text-indigo-800 underline"
+                  >
+                    Select None
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {aiSuggestions.map((suggestion, index) => (
+                  <label
+                    key={index}
+                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      selectedSuggestions.has(index)
+                        ? 'border-indigo-300 bg-indigo-50'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSuggestions.has(index)}
+                      onChange={() => handleToggleSuggestion(index)}
+                      className="mt-1 h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900">{suggestion.title}</p>
+                      <p className="text-sm text-gray-600 mt-0.5">{suggestion.description}</p>
+                      {suggestion.objectives.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1 truncate">
+                          {suggestion.objectives.slice(0, 2).join(' • ')}
+                          {suggestion.objectives.length > 2 && ` • +${suggestion.objectives.length - 2} more`}
+                        </p>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {/* Generation Options */}
+              <div className="border-t border-gray-200 pt-4 mt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={generateContent}
+                      onChange={(e) => setGenerateContent(e.target.checked)}
+                      className="h-4 w-4 text-indigo-600 rounded border-gray-300"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Generate content for modules
+                    </span>
+                  </label>
+                  <span className="text-xs text-gray-500">
+                    ~{selectedSuggestions.size * 25} tokens
+                  </span>
+                </div>
+
+                {generateContent && (
+                  <div className="grid grid-cols-2 gap-4 pl-6">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Flashcards per module
+                      </label>
+                      <input
+                        type="number"
+                        value={flashcardCount}
+                        onChange={(e) => setFlashcardCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 15)))}
+                        min={1}
+                        max={50}
+                        className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">
+                        Quiz questions per module
+                      </label>
+                      <input
+                        type="number"
+                        value={quizQuestionCount}
+                        onChange={(e) => setQuizQuestionCount(Math.max(1, Math.min(30, parseInt(e.target.value) || 10)))}
+                        min={1}
+                        max={30}
+                        className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200 mt-4">
+                <p className="text-sm text-gray-600">
+                  {selectedSuggestions.size} of {aiSuggestions.length} selected
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={handleCloseSuggestionModal}
+                    disabled={isCreatingModules}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmSuggestions}
+                    disabled={selectedSuggestions.size === 0 || isCreatingModules}
+                  >
+                    {isCreatingModules ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        {generationProgress
+                          ? `Generating ${generationProgress.current}/${generationProgress.total}...`
+                          : 'Creating...'}
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-1" />
+                        Create {selectedSuggestions.size} Module{selectedSuggestions.size !== 1 ? 's' : ''}
+                        {generateContent && ` (~${selectedSuggestions.size * 25} tokens)`}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

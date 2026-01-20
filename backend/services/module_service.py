@@ -110,6 +110,32 @@ class ModuleService(BaseService):
         await self.storage.create("modules", module.model_dump(mode="json"))
         return module
 
+    async def batch_create_modules(
+        self, course_id: str, user_id: str, modules: list[ModuleCreate]
+    ) -> list[Module]:
+        """Create multiple modules using batch storage operation."""
+        await self._get_editable_course(course_id, user_id)
+
+        now = datetime.now(timezone.utc)
+        module_data_list = []
+
+        for data in modules:
+            module = Module(
+                id=str(uuid4()),
+                course_id=course_id,
+                title=data.title,
+                order_index=data.order_index,
+                content_markdown=data.content_markdown,
+                flashcards=data.flashcards,
+                quiz=data.quiz,
+                created_at=now,
+                updated_at=now,
+            )
+            module_data_list.append(module.model_dump(mode="json"))
+
+        results = await self.storage.batch_create("modules", module_data_list)
+        return [self._parse_module(r) for r in results]
+
     async def update_module(
         self, course_id: str, module_id: str, user_id: str, data: ModuleUpdate
     ) -> Module:
