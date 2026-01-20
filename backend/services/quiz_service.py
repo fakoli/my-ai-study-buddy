@@ -13,6 +13,7 @@ from models.quiz import (
     QuizWithSubmission,
 )
 from storage.base import StorageBackend
+from utils.datetime_utils import ensure_datetime
 
 
 class QuizService:
@@ -138,9 +139,7 @@ class QuizService:
                 quiz_id=sub_data["quiz_id"],
                 user_id=sub_data["user_id"],
                 answers=sub_data["answers"],
-                submitted_at=datetime.fromisoformat(sub_data["submitted_at"])
-                if isinstance(sub_data["submitted_at"], str)
-                else sub_data["submitted_at"],
+                submitted_at=ensure_datetime(sub_data["submitted_at"]),
                 score=sub_data["score"],
                 results=[QuestionResult(**r) for r in sub_data["results"]],
             )
@@ -153,8 +152,6 @@ class QuizService:
             deck_id=quiz_data.get("deck_id"),
             topic=quiz_data.get("topic"),
             questions=questions,
-            created_at=datetime.fromisoformat(quiz_data["created_at"])
-            if isinstance(quiz_data["created_at"], str)
-            else quiz_data["created_at"],
+            created_at=ensure_datetime(quiz_data["created_at"]),
             submission=submission,
         )

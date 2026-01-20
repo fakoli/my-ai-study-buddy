@@ -12,6 +12,7 @@ from models.review import (
     ReviewHistoryResponse,
 )
 from storage.base import StorageBackend
+from utils.datetime_utils import ensure_datetime
 
 
 class ReviewService:
@@ -97,9 +98,7 @@ class ReviewService:
                 card_review = await self.storage.get("card_reviews", card["id"])
 
                 if card_review:
-                    next_review = card_review.get("next_review_at")
-                    if isinstance(next_review, str):
-                        next_review = datetime.fromisoformat(next_review)
+                    next_review = ensure_datetime(card_review.get("next_review_at"))
                     if next_review and next_review > now:
                         continue
 
@@ -131,9 +130,7 @@ class ReviewService:
         reviews = await self.storage.list("reviews", {"user_id": user_id})
 
         reviews.sort(
-            key=lambda r: r["reviewed_at"]
-            if isinstance(r["reviewed_at"], datetime)
-            else datetime.fromisoformat(r["reviewed_at"]),
+            key=lambda r: ensure_datetime(r["reviewed_at"]) or datetime.min.replace(tzinfo=timezone.utc),
             reverse=True,
         )
 
@@ -147,9 +144,7 @@ class ReviewService:
                         card_id=review["card_id"],
                         card_front=card["front"],
                         difficulty=review["difficulty"],
-                        reviewed_at=datetime.fromisoformat(review["reviewed_at"])
-                        if isinstance(review["reviewed_at"], str)
-                        else review["reviewed_at"],
+                        reviewed_at=ensure_datetime(review["reviewed_at"]),
                     )
                 )
 

@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from models.progress import ProgressStats, Session, SessionsResponse, TopicMastery, TopicMasteryResponse
 from storage.base import StorageBackend
+from utils.datetime_utils import ensure_datetime
 
 
 class ProgressService:
@@ -49,16 +50,12 @@ class ProgressService:
         activity_dates = set()
 
         for r in reviews:
-            reviewed_at = r.get("reviewed_at")
-            if isinstance(reviewed_at, str):
-                reviewed_at = datetime.fromisoformat(reviewed_at)
+            reviewed_at = ensure_datetime(r.get("reviewed_at"))
             if reviewed_at:
                 activity_dates.add(reviewed_at.date())
 
         for s in submissions:
-            submitted_at = s.get("submitted_at")
-            if isinstance(submitted_at, str):
-                submitted_at = datetime.fromisoformat(submitted_at)
+            submitted_at = ensure_datetime(s.get("submitted_at"))
             if submitted_at:
                 activity_dates.add(submitted_at.date())
 
@@ -96,13 +93,8 @@ class ProgressService:
 
     def _calculate_session_duration(self, session: dict) -> int:
         """Calculate session duration in minutes."""
-        started = session.get("started_at")
-        ended = session.get("ended_at")
-
-        if isinstance(started, str):
-            started = datetime.fromisoformat(started)
-        if isinstance(ended, str):
-            ended = datetime.fromisoformat(ended)
+        started = ensure_datetime(session.get("started_at"))
+        ended = ensure_datetime(session.get("ended_at"))
 
         if not started or not ended:
             return 0
@@ -117,9 +109,7 @@ class ProgressService:
         sessions = await self.storage.list("sessions", {"user_id": user_id})
 
         sessions.sort(
-            key=lambda s: s["started_at"]
-            if isinstance(s["started_at"], datetime)
-            else datetime.fromisoformat(s["started_at"]),
+            key=lambda s: ensure_datetime(s["started_at"]) or datetime.min.replace(tzinfo=timezone.utc),
             reverse=True,
         )
 
@@ -127,12 +117,8 @@ class ProgressService:
             Session(
                 id=s["id"],
                 user_id=s["user_id"],
-                started_at=datetime.fromisoformat(s["started_at"])
-                if isinstance(s["started_at"], str)
-                else s["started_at"],
-                ended_at=datetime.fromisoformat(s["ended_at"])
-                if isinstance(s.get("ended_at"), str)
-                else s.get("ended_at"),
+                started_at=ensure_datetime(s["started_at"]),
+                ended_at=ensure_datetime(s.get("ended_at")),
                 activity_type=s["activity_type"],
                 items_completed=s.get("items_completed", 0),
             )
@@ -172,9 +158,7 @@ class ProgressService:
         return Session(
             id=session_data["id"],
             user_id=session_data["user_id"],
-            started_at=datetime.fromisoformat(session_data["started_at"])
-            if isinstance(session_data["started_at"], str)
-            else session_data["started_at"],
+            started_at=ensure_datetime(session_data["started_at"]),
             ended_at=now,
             activity_type=session_data["activity_type"],
             items_completed=items_completed,
@@ -199,10 +183,8 @@ class ProgressService:
                     if review_count >= 3:
                         mastered_count += 1
 
-                    next_review = card_review.get("next_review_at")
+                    next_review = ensure_datetime(card_review.get("next_review_at"))
                     if next_review:
-                        if isinstance(next_review, str):
-                            next_review = datetime.fromisoformat(next_review)
                         if not last_reviewed or next_review > last_reviewed:
                             last_reviewed = next_review
 

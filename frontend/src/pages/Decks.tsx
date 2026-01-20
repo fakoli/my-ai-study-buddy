@@ -3,11 +3,15 @@ import { DeckList } from '../components/flashcards/DeckList';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
+import { Textarea } from '../components/common/Textarea';
+import { SkeletonDeckGrid } from '../components/common/Skeleton';
 import { useDecks, useCreateDeck } from '../hooks/useDecks';
+import { useToast } from '../hooks/useToast';
 
 export function Decks() {
   const { data: decks, isLoading } = useDecks();
   const createDeck = useCreateDeck();
+  const { success, error: showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -19,21 +23,26 @@ export function Decks() {
       setIsModalOpen(false);
       setTitle('');
       setDescription('');
-    } catch (error) {
-      console.error('Failed to create deck:', error);
+      success('Deck created successfully');
+    } catch (err) {
+      console.error('Failed to create deck:', err);
+      showError('Failed to create deck. Please try again.');
     }
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+      <div className="space-y-6 page-enter">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">My Decks</h1>
+        </div>
+        <SkeletonDeckGrid count={6} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 page-enter">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">My Decks</h1>
       </div>
@@ -54,22 +63,16 @@ export function Decks() {
             placeholder="e.g., Python Basics"
             required
           />
-          <div className="space-y-1">
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Description (optional)
-            </label>
-            <textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What will you learn in this deck?"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              rows={3}
-            />
-          </div>
+          <Textarea
+            id="description"
+            label="Description (optional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="What will you learn in this deck?"
+            rows={3}
+            showCharCount
+            maxLength={500}
+          />
           <div className="flex gap-2 justify-end">
             <Button
               type="button"

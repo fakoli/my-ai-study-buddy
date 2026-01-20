@@ -1,6 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +24,16 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
     jwt_expiration_hours: int = 24
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        """Reject default secrets in production mode."""
+        if not self.debug and self.jwt_secret == "change-me-in-production":
+            raise ValueError(
+                "JWT_SECRET must be set to a secure value in production (DEBUG=false). "
+                "Generate a secure secret with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+            )
+        return self
 
     # Supabase (optional)
     supabase_url: str | None = None
