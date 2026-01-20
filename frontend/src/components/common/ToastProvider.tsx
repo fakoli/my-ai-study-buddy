@@ -1,4 +1,4 @@
-import { createContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Toast, ToastVariant } from './Toast';
 
 interface ToastItem {
@@ -54,7 +54,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
       {children}
       <div
         aria-label="Notifications"
-        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 sm:bottom-auto sm:top-4"
+        className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 sm:bottom-auto sm:top-4"
       >
         {toasts.map((t) => (
           <Toast
@@ -69,5 +69,21 @@ export function ToastProvider({ children }: ToastProviderProps) {
       </div>
     </ToastContext.Provider>
   );
+}
+
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+
+  const showToast = useCallback(
+    (message: string, variant: ToastVariant = 'info') => {
+      context.toast(message, variant);
+    },
+    [context]
+  );
+
+  return { showToast, ...context };
 }
 

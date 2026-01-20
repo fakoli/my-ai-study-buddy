@@ -10,6 +10,8 @@ A learning platform for visual learners who learn by doing. Combines flashcards,
 - **Learning Paths**: Organize courses into learning paths for guided learning
 - **AI-Powered Content**: Generate module content, flashcards, quizzes, and visuals using AI
 - **Progress Tracking**: Track your learning progress, streaks, and mastery
+- **Admin Console**: User management and token administration (admin role)
+- **User API Keys**: Users can provide their own Claude/Gemini API keys
 - **Notifications**: Configurable email and SMS reminders
 
 ## Tech Stack
@@ -108,19 +110,25 @@ Users can also provide their own API keys via the Settings page.
 
 ## API Overview
 
-Base URL: `/api/v1`
+Base URL: `/api/v1` | **74+ total endpoints**
 
-| Resource | Purpose |
-|----------|---------|
-| `/decks` | Flashcard CRUD |
-| `/reviews` | Spaced repetition tracking |
-| `/quiz` | Quiz generation and submission |
-| `/progress` | Stats and session history |
-| `/ai` | Explanations, hints, examples |
-| `/auth` | Registration, login, API keys |
-| `/courses` | Course CRUD and discovery |
-| `/paths` | Learning path management |
-| `/generate` | AI content generation |
+| Resource | Endpoints | Purpose |
+|----------|-----------|---------|
+| `/auth` | 6 | Registration, login, tokens |
+| `/courses` | 7 | Course CRUD and discovery |
+| `/courses/.../modules` | 7 | Module CRUD and reordering |
+| `/paths` | 9 | Learning path management |
+| `/generate` | 5 | AI content generation |
+| `/admin` | 4 | User management (admin only) |
+| `/settings` | 4 | User API key management |
+| `/decks` | 8 | Flashcard CRUD |
+| `/reviews` | 3 | Spaced repetition tracking |
+| `/quiz` | 3 | Quiz generation/submission |
+| `/progress` | 3 | Stats and session history |
+| `/ai` | 4 | Explanations, hints, examples |
+| `/uploads` | 3 | Image upload and serving |
+
+See [docs/architecture.md](docs/architecture.md) for full API specs.
 
 ## Development
 

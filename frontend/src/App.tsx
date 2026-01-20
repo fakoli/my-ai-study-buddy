@@ -18,7 +18,8 @@ import { CourseDetail } from './pages/CourseDetail';
 import { CourseEditor } from './pages/CourseEditor';
 import { ModuleViewer } from './pages/ModuleViewer';
 import { ModuleEditor } from './pages/ModuleEditor';
-import { Home, BookOpen, Brain, Settings as SettingsIcon, LogOut, Map, Library } from 'lucide-react';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { Home, BookOpen, Brain, Settings as SettingsIcon, LogOut, Map, Library, Shield } from 'lucide-react';
 import clsx from 'clsx';
 import './index.css';
 
@@ -50,8 +51,10 @@ function ProtectedRoute() {
 }
 
 function Layout() {
-  const { logout } = useAuthContext();
+  const { user, logout } = useAuthContext();
   const location = useLocation();
+
+  const isAdmin = user?.role === 'admin';
 
   const navItems = [
     { to: '/', icon: Home, label: 'Dashboard' },
@@ -60,6 +63,7 @@ function Layout() {
     { to: '/decks', icon: BookOpen, label: 'Decks' },
     { to: '/review', icon: Brain, label: 'Review' },
     { to: '/settings', icon: SettingsIcon, label: 'Settings' },
+    ...(isAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin' }] : []),
   ];
 
   return (
@@ -165,6 +169,8 @@ function App() {
               <Route path="/review" element={<Review />} />
               <Route path="/quiz/:deckId" element={<Quiz />} />
               <Route path="/settings" element={<Settings />} />
+              {/* Admin */}
+              <Route path="/admin" element={<AdminDashboard />} />
             </Route>
               </Routes>
             </LiveRegionProvider>
