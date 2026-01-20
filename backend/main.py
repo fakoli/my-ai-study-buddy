@@ -40,11 +40,12 @@ async def request_logging_middleware(request: Request, call_next):
     start_time = time.perf_counter()
 
     # Log request
+    client_ip = request.client.host if request.client and getattr(request.client, "host", None) else "unknown"
     logger.info(
         f"Request started: {request.method} {request.url.path}",
         method=request.method,
         path=request.url.path,
-        client=request.client.host if request.client else None,
+        client=client_ip,
     )
 
     try:
