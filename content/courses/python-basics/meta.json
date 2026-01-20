@@ -1,0 +1,7 @@
+{
+  "id": "python-basics",
+  "title": "Python Basics",
+  "description": "Introduction to Python programming for beginners",
+  "modules": ["01-variables", "02-data-types"],
+  "difficulty": "beginner"
+}

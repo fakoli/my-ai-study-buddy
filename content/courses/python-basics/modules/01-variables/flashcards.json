@@ -1,0 +1,24 @@
+{
+  "cards": [
+    {
+      "front": "What keyword is used to declare a variable in Python?",
+      "back": "Python doesn't require a keyword. Just assign a value: x = 5"
+    },
+    {
+      "front": "What naming convention is recommended for Python variables?",
+      "back": "snake_case - lowercase letters with underscores between words"
+    },
+    {
+      "front": "Can variable names start with a number in Python?",
+      "back": "No. Variable names must start with a letter or underscore"
+    },
+    {
+      "front": "Are Python variable names case-sensitive?",
+      "back": "Yes. 'name', 'Name', and 'NAME' are three different variables"
+    },
+    {
+      "front": "What happens when you assign a new value to an existing variable?",
+      "back": "The variable simply stores the new value, replacing the old one"
+    }
+  ]
+}

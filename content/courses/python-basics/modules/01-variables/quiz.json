@@ -1,0 +1,27 @@
+{
+  "questions": [
+    {
+      "question": "Which of the following is a valid Python variable name?",
+      "options": ["2name", "_name", "my-name", "class"],
+      "correct_index": 1,
+      "explanation": "_name is valid. Variable names can start with underscore. '2name' starts with a number, 'my-name' contains a hyphen, and 'class' is a reserved keyword."
+    },
+    {
+      "question": "What is the recommended naming convention for Python variables?",
+      "options": ["camelCase", "PascalCase", "snake_case", "UPPER_CASE"],
+      "correct_index": 2,
+      "explanation": "Python follows snake_case convention for variables and functions."
+    },
+    {
+      "question": "What happens if you use a variable without assigning it first?",
+      "options": [
+        "It automatically becomes None",
+        "It automatically becomes 0",
+        "Python raises a NameError",
+        "Python creates it as an empty string"
+      ],
+      "correct_index": 2,
+      "explanation": "Python raises a NameError when you try to use a variable that hasn't been assigned a value."
+    }
+  ]
+}
