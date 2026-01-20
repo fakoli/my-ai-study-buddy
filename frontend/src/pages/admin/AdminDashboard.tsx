@@ -66,7 +66,7 @@ export function AdminDashboard() {
     const parsedAmount = Number.parseInt(trimmedAmount, 10);
 
     // Validate the amount is a valid integer
-    if (!/^-?\d+$/.test(trimmedAmount) || Number.isNaN(parsedAmount)) {
+    if (Number.isNaN(parsedAmount) || !/^-?\d+$/.test(trimmedAmount)) {
       showToast('Please enter a valid integer token amount', 'error');
       return;
     }
@@ -123,6 +123,45 @@ export function AdminDashboard() {
     const nextPage = Math.min(Math.max(page, 1), totalPages);
     searchParams.set('page', String(nextPage));
     setSearchParams(searchParams);
+  };
+
+  const renderPagination = () => {
+    if (!usersData || usersData.total <= usersData.limit) {
+      return null;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(usersData.total / usersData.limit));
+
+    return (
+      <div className="py-4 flex flex-col items-center gap-2 text-sm text-gray-500">
+        <div>
+          Showing {usersData.users.length} of {usersData.total} users
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+            aria-label="Go to previous page"
+          >
+            Previous
+          </Button>
+          <span className="text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            aria-label="Go to next page"
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   // Error state handling
@@ -291,40 +330,7 @@ export function AdminDashboard() {
                 </div>
               )}
 
-              {usersData && usersData.total > usersData.limit && (() => {
-                const totalPages = Math.max(1, Math.ceil(usersData.total / usersData.limit));
-
-                return (
-                  <div className="py-4 flex flex-col items-center gap-2 text-sm text-gray-500">
-                    <div>
-                      Showing {usersData.users.length} of {usersData.total} users
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage <= 1}
-                        aria-label="Go to previous page"
-                      >
-                        Previous
-                      </Button>
-                      <span className="text-gray-600">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage >= totalPages}
-                        aria-label="Go to next page"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })()}
+              {renderPagination()}
             </div>
           )}
         </CardContent>

@@ -163,14 +163,22 @@ class AdminService(BaseService):
                 created_at=now,
             )
             await self.storage.create("token_transactions", transaction.model_dump())
-        except Exception:
+        except Exception as e:
             # Attempt to roll back the balance update if transaction logging fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to create token transaction for user {user_id}. "
+                f"Attempting rollback. Error: {e}"
+            )
             try:
                 await self.storage.update(
                     "users",
                     user_id,
                     {"token_balance": previous_balance},
                 )
+            except Exception as rollback_error:
+                logger.error(f"Rollback failed for user {user_id}: {rollback_error}")
             finally:
                 # Re-raise the original error to signal failure to the caller
                 raise
