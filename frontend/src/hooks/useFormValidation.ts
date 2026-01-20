@@ -151,6 +151,7 @@ export function useFormValidation<T extends string>(
   const validateField = useCallback(
     (name: T): boolean => {
       const fieldConfig = config[name];
+      let fieldIsValid = true;
       
       setFormState((prev) => {
         const currentValues = {} as Record<string, string>;
@@ -159,7 +160,7 @@ export function useFormValidation<T extends string>(
         }
         
         const error = validateValue(prev[name].value, fieldConfig.rules, currentValues);
-        const fieldIsValid = error === null;
+        fieldIsValid = error === null;
 
         return {
           ...prev,
@@ -171,8 +172,7 @@ export function useFormValidation<T extends string>(
         };
       });
 
-      // Return validation result based on latest state
-      return true; // Will be overridden by state update
+      return fieldIsValid;
     },
     [config, fieldNames]
   );
