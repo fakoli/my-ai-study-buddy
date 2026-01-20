@@ -105,6 +105,45 @@ npm run lint --prefix frontend
 - Create endpoints without Pydantic models
 - Send notifications without preference checks
 - Use placeholders—output complete code
+- Commit directly to `main`—always use PR workflow
+
+## Git Workflow
+
+**Always use a PR-based workflow. Never commit directly to `main`.**
+
+### Creating Changes
+
+1. Create a feature branch from `main`:
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b feature/descriptive-name
+   ```
+
+2. Make commits on the feature branch with clear messages
+
+3. Push the branch and create a PR:
+   ```bash
+   git push -u origin feature/descriptive-name
+   gh pr create --title "Brief description" --body "## Summary\n- Change 1\n- Change 2"
+   ```
+
+### Branch Naming
+
+| Prefix | Use Case |
+|--------|----------|
+| `feature/` | New features |
+| `fix/` | Bug fixes |
+| `refactor/` | Code refactoring |
+| `docs/` | Documentation updates |
+| `chore/` | Maintenance tasks |
+
+### PR Requirements
+
+- Descriptive title summarizing the change
+- Summary section with bullet points
+- Test plan if applicable
+- Link to related issues if any
 
 ## API Overview
 
