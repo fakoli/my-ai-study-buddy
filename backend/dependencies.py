@@ -4,8 +4,8 @@ from fastapi import Depends, Header
 from jose import JWTError
 
 from config import Settings, get_settings
-from exceptions import UnauthorizedException
-from models.user import User
+from exceptions import ForbiddenException, UnauthorizedException
+from models.user import User, UserRole
 from storage import get_storage_backend
 from storage.base import StorageBackend
 
@@ -63,3 +63,14 @@ StorageDep = Annotated[StorageBackend, Depends(get_storage)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
+
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Verify the current user has admin privileges."""
+    if user.role != UserRole.ADMIN:
+        raise ForbiddenException("Admin access required")
+    return user
+
+
+# Admin type alias
+AdminUser = Annotated[User, Depends(require_admin)]

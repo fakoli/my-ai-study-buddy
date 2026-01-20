@@ -1,6 +1,12 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, EmailStr, Field
+
+
+class UserRole(str, Enum):
+    USER = "user"
+    ADMIN = "admin"
 
 
 class UserBase(BaseModel):
@@ -21,6 +27,7 @@ class User(UserBase):
     id: str
     created_at: datetime
     token_balance: int = 100
+    role: UserRole = UserRole.USER
 
 
 class UserInDB(User):

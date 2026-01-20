@@ -6,7 +6,7 @@ from jose import JWTError, jwt
 
 from config import Settings
 from exceptions import ConflictException, InsufficientTokensException, UnauthorizedException
-from models.user import User, UserCreate, UserInDB
+from models.user import User, UserCreate, UserInDB, UserRole
 from storage.base import StorageBackend
 from utils.datetime_utils import ensure_datetime
 
@@ -57,6 +57,7 @@ class AuthService:
             name=user_in_db.name,
             created_at=user_in_db.created_at,
             token_balance=user_in_db.token_balance,
+            role=user_in_db.role,
         )
 
     async def login(self, email: str, password: str) -> str:
@@ -93,6 +94,7 @@ class AuthService:
             name=user_data["name"],
             created_at=ensure_datetime(user_data["created_at"]),
             token_balance=user_data.get("token_balance", 100),
+            role=UserRole(user_data.get("role", "user")),
         )
 
     async def get_token_balance(self, user_id: str) -> int:

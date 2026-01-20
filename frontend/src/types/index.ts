@@ -1,10 +1,13 @@
 // User types
+export type UserRole = 'user' | 'admin';
+
 export interface User {
   id: string;
   email: string;
   name: string;
   created_at: string;
   token_balance: number;
+  role?: UserRole;
 }
 
 export interface UserCreate {
@@ -629,4 +632,56 @@ export interface UserAPISettingsValidateResponse {
   provider: APIProvider;
   is_valid: boolean;
   message: string;
+}
+
+// ============================================
+// Admin Types
+// ============================================
+
+/** Token transaction record */
+export interface TokenTransaction {
+  id: string;
+  amount: number;
+  balance_after: number;
+  operation: string;
+  reason: string | null;
+  admin_id: string | null;
+  created_at: string;
+}
+
+/** Request to adjust a user's token balance */
+export interface AdjustTokensRequest {
+  amount: number;
+  reason: string;
+}
+
+/** Response after adjusting tokens */
+export interface AdjustTokensResponse {
+  user_id: string;
+  previous_balance: number;
+  new_balance: number;
+  amount: number;
+  transaction_id: string;
+}
+
+/** Response for user list endpoint */
+export interface UserListResponse {
+  users: User[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+/** Response for user detail endpoint */
+export interface UserDetailResponse {
+  user: User;
+  transactions: TokenTransaction[];
+}
+
+/** Response for admin stats endpoint */
+export interface AdminStatsResponse {
+  total_users: number;
+  admin_count: number;
+  user_count: number;
+  total_tokens: number;
 }
