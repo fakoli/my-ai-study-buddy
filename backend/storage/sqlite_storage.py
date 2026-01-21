@@ -90,18 +90,44 @@ class SQLiteStorage(StorageBackend):
     async def list(
         self, collection: str, filters: dict[str, Any] | None = None
     ) -> list[dict[str, Any]]:
-        """List documents in a collection, optionally filtered."""
+        """List documents in a collection, optionally filtered.
+
+        Uses SQL-level JSON_EXTRACT for filtering when possible,
+        which is significantly faster than Python filtering for large datasets.
+        """
         conn = await self._get_connection()
-        cursor = await conn.execute(
-            "SELECT data FROM documents WHERE collection = ?",
-            (collection,),
-        )
+
+        # Build SQL query with JSON_EXTRACT filters for better performance
+        sql = "SELECT data FROM documents WHERE collection = ?"
+        params: list[Any] = [collection]
+
+        if filters:
+            for key, value in filters.items():
+                # JSON_EXTRACT returns JSON type, need to handle string comparison
+                if isinstance(value, str):
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') = ?"
+                    params.append(value)
+                elif isinstance(value, bool):
+                    # SQLite stores booleans as 1/0 in JSON
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') = ?"
+                    params.append(1 if value else 0)
+                elif isinstance(value, (int, float)):
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') = ?"
+                    params.append(value)
+                elif value is None:
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') IS NULL"
+                else:
+                    # For complex types, fall back to Python filtering
+                    pass
+
+        cursor = await conn.execute(sql, tuple(params))
         rows = await cursor.fetchall()
         await cursor.close()
 
         results = []
         for row in rows:
             doc = json.loads(row["data"])
+            # Double-check filters in Python for any complex types we couldn't handle in SQL
             if self._matches_filters(doc, filters):
                 results.append(doc)
 
@@ -175,21 +201,43 @@ class SQLiteStorage(StorageBackend):
         return deleted
 
     async def count(self, collection: str, filters: dict[str, Any] | None = None) -> int:
-        """Count documents in a collection."""
-        if not filters:
-            # Fast path for unfiltered count
-            conn = await self._get_connection()
-            cursor = await conn.execute(
-                "SELECT COUNT(*) as cnt FROM documents WHERE collection = ?",
-                (collection,),
-            )
-            row = await cursor.fetchone()
-            await cursor.close()
-            return row["cnt"] if row else 0
+        """Count documents in a collection.
 
-        # Need to filter in Python
-        docs = await self.list(collection, filters)
-        return len(docs)
+        Uses SQL-level JSON_EXTRACT for filtering when possible,
+        which is faster than loading all documents into Python.
+        """
+        conn = await self._get_connection()
+
+        # Build SQL query with JSON_EXTRACT filters for better performance
+        sql = "SELECT COUNT(*) as cnt FROM documents WHERE collection = ?"
+        params: list[Any] = [collection]
+
+        if filters:
+            has_complex_filters = False
+            for key, value in filters.items():
+                if isinstance(value, str):
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') = ?"
+                    params.append(value)
+                elif isinstance(value, bool):
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') = ?"
+                    params.append(1 if value else 0)
+                elif isinstance(value, (int, float)):
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') = ?"
+                    params.append(value)
+                elif value is None:
+                    sql += f" AND JSON_EXTRACT(data, '$.{key}') IS NULL"
+                else:
+                    has_complex_filters = True
+
+            # If there are complex filters we can't handle in SQL, fall back
+            if has_complex_filters:
+                docs = await self.list(collection, filters)
+                return len(docs)
+
+        cursor = await conn.execute(sql, tuple(params))
+        row = await cursor.fetchone()
+        await cursor.close()
+        return row["cnt"] if row else 0
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator["SQLiteStorage"]:

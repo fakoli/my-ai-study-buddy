@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, cast
 
 
 class StorageBackend(ABC):
@@ -67,7 +68,7 @@ class StorageBackend(ABC):
     async def batch_delete(
         self, collection: str, ids: list[str]
     ) -> dict[str, bool]:
-        """Delete multiple documents, returning success status for each.
+        """Delete multiple documents in parallel, returning success status for each.
 
         Args:
             collection: The collection name
@@ -76,30 +77,48 @@ class StorageBackend(ABC):
         Returns:
             Dict mapping each ID to its deletion success status
 
-        Default implementation calls delete() for each ID.
+        Default implementation calls delete() for each ID in parallel.
         Backends with batch support should override for better performance.
         """
-        results = {}
-        for id in ids:
-            results[id] = await self.delete(collection, id)
-        return results
+        if not ids:
+            return {}
+
+        tasks = [self.delete(collection, doc_id) for doc_id in ids]
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+
+        return {
+            doc_id: (result is True) if not isinstance(result, Exception) else False
+            for doc_id, result in zip(ids, results_list)
+        }
 
     async def batch_create(
         self, collection: str, items: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """Create multiple documents.
+        """Create multiple documents in parallel.
 
         Args:
             collection: The collection name
             items: List of documents to create
 
         Returns:
-            List of created documents
+            List of created documents (in same order as input)
 
-        Default implementation calls create() for each item.
-        Backends with batch support should override for better performance.
+        Default implementation calls create() for each item in parallel.
+        Backends with native batch support should override for better performance.
+
+        Note: Uses asyncio.gather with return_exceptions=True to handle
+        partial failures gracefully. Failed items will raise on access.
         """
-        results = []
-        for item in items:
-            results.append(await self.create(collection, item))
-        return results
+        if not items:
+            return []
+
+        tasks = [self.create(collection, item) for item in items]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Check for any exceptions and re-raise the first one
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+
+        # After the loop, we know all results are dicts (not exceptions)
+        return cast(list[dict[str, Any]], results)

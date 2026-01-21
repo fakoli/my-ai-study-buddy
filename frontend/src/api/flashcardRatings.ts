@@ -8,6 +8,14 @@ import type {
   RateFlashcardRequest,
 } from '../types';
 
+/**
+ * Combined response with ratings and summary
+ */
+export interface RatingsWithSummaryResponse {
+  ratings: FlashcardRatingRecord[];
+  summary: FlashcardRatingSummary;
+}
+
 export const flashcardRatingsApi = {
   rateFlashcard: (
     courseId: string,
@@ -27,6 +35,15 @@ export const flashcardRatingsApi = {
   getRatingSummary: (courseId: string, moduleId: string) =>
     api.get<FlashcardRatingSummary>(
       `/courses/${courseId}/modules/${moduleId}/flashcards/summary`
+    ),
+
+  /**
+   * Get both ratings and summary in one API call.
+   * More efficient than calling getUserRatings and getRatingSummary separately.
+   */
+  getRatingsWithSummary: (courseId: string, moduleId: string) =>
+    api.get<RatingsWithSummaryResponse>(
+      `/courses/${courseId}/modules/${moduleId}/flashcards/ratings-with-summary`
     ),
 
   getFilteredFlashcards: (

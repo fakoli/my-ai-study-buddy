@@ -93,3 +93,14 @@ class UnhelpfulCardsResponse(BaseModel):
     course_id: str
     unhelpful_cards: list[UnhelpfulCardFeedback]
     total: int
+
+
+class RatingsWithSummaryResponse(BaseModel):
+    """Combined response with both ratings and summary.
+
+    This reduces two API calls to one for the common case of loading
+    module flashcard state.
+    """
+
+    ratings: list[FlashcardRatingRecord]
+    summary: FlashcardRatingSummary
