@@ -60,6 +60,12 @@ function Layout() {
     ...(isAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin' }] : []),
   ];
 
+  // Check if current path matches nav item (handles nested routes)
+  const isActive = (to: string) => {
+    if (to === '/') return location.pathname === '/';
+    return location.pathname.startsWith(to);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <a
@@ -68,12 +74,12 @@ function Layout() {
       >
         Skip to main content
       </a>
-      <nav className="bg-white border-b border-gray-200" aria-label="Main navigation">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40" aria-label="Main navigation">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Link to="/" className="flex items-center gap-2 group">
+                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center group-hover:bg-indigo-700 transition-colors">
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
                 <span className="font-bold text-gray-900">Study Buddy</span>
@@ -85,19 +91,20 @@ function Layout() {
                   key={to}
                   to={to}
                   className={clsx(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                    location.pathname === to
-                      ? 'bg-indigo-50 text-indigo-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all',
+                    isActive(to)
+                      ? 'bg-indigo-100 text-indigo-700 shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   )}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className={clsx('w-4 h-4', isActive(to) && 'text-indigo-600')} />
                   {label}
                 </Link>
               ))}
+              <div className="w-px h-6 bg-gray-200 mx-1" />
               <button
                 onClick={logout}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 Logout
@@ -107,25 +114,36 @@ function Layout() {
         </div>
       </nav>
 
-      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 sm:pb-8">
         <Outlet />
       </main>
 
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200" aria-label="Mobile navigation">
-        <div className="flex justify-around">
+      {/* Mobile bottom navigation */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 safe-area-pb" aria-label="Mobile navigation">
+        <div className="flex justify-around px-2">
           {navItems.map(({ to, icon: Icon, label }) => (
             <Link
               key={to}
               to={to}
               className={clsx(
-                'flex flex-col items-center gap-1 py-3 px-4 text-xs font-medium',
-                location.pathname === to
+                'flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 transition-all',
+                isActive(to)
                   ? 'text-indigo-600'
                   : 'text-gray-500'
               )}
             >
-              <Icon className="w-5 h-5" />
-              {label}
+              <div className={clsx(
+                'p-1.5 rounded-lg transition-colors',
+                isActive(to) ? 'bg-indigo-100' : ''
+              )}>
+                <Icon className="w-5 h-5" />
+              </div>
+              <span className={clsx(
+                'text-[10px] font-medium truncate',
+                isActive(to) ? 'text-indigo-600' : 'text-gray-500'
+              )}>
+                {label}
+              </span>
             </Link>
           ))}
         </div>

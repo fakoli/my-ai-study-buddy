@@ -1,4 +1,4 @@
-import { Plus, Map } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Card } from '../common/Card';
 import { EmptyState } from '../common/EmptyState';
 import { PathCard } from './PathCard';
@@ -14,7 +14,7 @@ export function PathList({ paths, onCreatePath }: PathListProps) {
     return (
       <Card>
         <EmptyState
-          icon={Map}
+          illustration="/images/empty-no-paths.png"
           title="No learning paths yet"
           description="Create your first learning path to organize courses into a structured journey"
           action={{
