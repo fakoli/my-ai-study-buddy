@@ -5,6 +5,7 @@ import { Button } from './Button';
 
 interface EmptyStateProps {
   icon?: LucideIcon;
+  illustration?: string;
   title: string;
   description?: string;
   action?: {
@@ -22,6 +23,7 @@ interface EmptyStateProps {
 
 export function EmptyState({
   icon: Icon = Inbox,
+  illustration,
   title,
   description,
   action,
@@ -38,9 +40,18 @@ export function EmptyState({
         className
       )}
     >
-      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-        <Icon className="w-6 h-6 text-gray-400" aria-hidden="true" />
-      </div>
+      {illustration ? (
+        <img
+          src={illustration}
+          alt=""
+          className="w-48 h-48 object-contain mb-4"
+          aria-hidden="true"
+        />
+      ) : (
+        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <Icon className="w-6 h-6 text-gray-400" aria-hidden="true" />
+        </div>
+      )}
 
       <h3 className="text-lg font-medium text-gray-900 mb-1">{title}</h3>
 

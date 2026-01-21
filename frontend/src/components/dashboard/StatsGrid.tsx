@@ -5,7 +5,6 @@ import {
   Flame,
   GraduationCap,
   Target,
-  Rocket,
   ArrowRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -51,9 +50,12 @@ function WelcomeCard() {
     <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100">
       <CardContent className="py-8">
         <div className="flex flex-col lg:flex-row items-center gap-6">
-          <div className="p-4 bg-white rounded-2xl shadow-sm">
-            <Rocket className="w-10 h-10 text-indigo-600" />
-          </div>
+          <img
+            src="/images/empty-getting-started.png"
+            alt=""
+            className="w-32 h-32 object-contain"
+            aria-hidden="true"
+          />
           <div className="flex-1 text-center lg:text-left">
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               Ready to start your learning journey?

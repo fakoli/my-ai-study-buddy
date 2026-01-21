@@ -56,9 +56,12 @@ export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-6">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-50 flex items-center justify-center">
-              <PlayCircle className="w-6 h-6 text-indigo-400" />
-            </div>
+            <img
+              src="/images/empty-no-activity.png"
+              alt=""
+              className="w-32 h-32 mx-auto mb-3 object-contain"
+              aria-hidden="true"
+            />
             <p className="text-sm font-medium text-gray-700 mb-1">
               Ready to get started?
             </p>

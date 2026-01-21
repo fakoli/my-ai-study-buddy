@@ -1,4 +1,4 @@
-import { Plus, BookOpen } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Card } from '../common/Card';
 import { EmptyState } from '../common/EmptyState';
 import { CourseCard } from './CourseCard';
@@ -23,7 +23,7 @@ export function CourseList({
     return (
       <Card>
         <EmptyState
-          icon={BookOpen}
+          illustration="/images/empty-no-courses.png"
           title="No courses yet"
           description="Create your first course to start building learning content"
           action={{
