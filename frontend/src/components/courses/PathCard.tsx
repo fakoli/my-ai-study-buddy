@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Map, BookOpen, Clock, MoreVertical, Play, CheckCircle } from 'lucide-react';
+import { BookOpen, Clock, MoreVertical, Play, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '../common/Card';
 import type { LearningPathResponse, CourseDifficulty } from '../../types';
 
@@ -19,6 +19,12 @@ const difficultyColors: Record<CourseDifficulty, { bg: string; text: string }> =
   advanced: { bg: 'bg-rose-100', text: 'text-rose-700' },
 };
 
+const defaultThumbnails: Record<CourseDifficulty, string> = {
+  beginner: '/images/default-thumb-beginner.png',
+  intermediate: '/images/default-thumb-intermediate.png',
+  advanced: '/images/default-thumb-advanced.png',
+};
+
 export function PathCard({ path, onOptions, progress }: PathCardProps) {
   const colors = difficultyColors[path.difficulty];
   const progressPercent = progress && progress.totalCourses > 0
@@ -32,19 +38,11 @@ export function PathCard({ path, onOptions, progress }: PathCardProps) {
         <CardContent className="flex flex-col h-full">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg transition-colors ${
-                isComplete
-                  ? 'bg-green-100 group-hover:bg-green-200'
-                  : progress?.isEnrolled
-                    ? 'bg-indigo-100 group-hover:bg-indigo-200'
-                    : 'bg-gray-100 group-hover:bg-indigo-100'
-              }`}>
-                {isComplete ? (
-                  <CheckCircle className="w-5 h-5 text-green-600" aria-hidden="true" />
-                ) : (
-                  <Map className="w-5 h-5 text-indigo-600" aria-hidden="true" />
-                )}
-              </div>
+              <img
+                src={path.thumbnail_url || defaultThumbnails[path.difficulty]}
+                alt=""
+                className="w-10 h-10 rounded-lg object-cover"
+              />
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
                   {path.title}

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { BookOpen, Users, Sparkles, MoreVertical, Plus } from 'lucide-react';
+import { Users, Sparkles, MoreVertical, Plus } from 'lucide-react';
 import { Card, CardContent } from '../common/Card';
 import type { CourseResponse, CourseDifficulty } from '../../types';
 
@@ -16,6 +16,12 @@ const difficultyColors: Record<CourseDifficulty, { bg: string; text: string }> =
   advanced: { bg: 'bg-rose-100', text: 'text-rose-700' },
 };
 
+const defaultThumbnails: Record<CourseDifficulty, string> = {
+  beginner: '/images/default-thumb-beginner.png',
+  intermediate: '/images/default-thumb-intermediate.png',
+  advanced: '/images/default-thumb-advanced.png',
+};
+
 export function CourseCard({ course, onOptions, onAddToPath, showAuthor = true }: CourseCardProps) {
   const colors = difficultyColors[course.difficulty];
 
@@ -25,17 +31,11 @@ export function CourseCard({ course, onOptions, onAddToPath, showAuthor = true }
         <CardContent className="flex flex-col h-full">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              {course.thumbnail_url ? (
-                <img
-                  src={course.thumbnail_url}
-                  alt=""
-                  className="w-10 h-10 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                  <BookOpen className="w-5 h-5 text-purple-600" aria-hidden="true" />
-                </div>
-              )}
+              <img
+                src={course.thumbnail_url || defaultThumbnails[course.difficulty]}
+                alt=""
+                className="w-10 h-10 rounded-lg object-cover"
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
