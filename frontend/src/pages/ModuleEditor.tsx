@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Sparkles } from 'lucide-react';
 import { Button } from '../components/common/Button';
@@ -10,6 +10,7 @@ import {
   FlashcardsTab,
   QuizTab,
 } from '../components/module-editor';
+import { SandboxTab } from '../components/module-editor/SandboxTab';
 import { useCourse } from '../hooks/useCourses';
 import { useModule, useCreateModule, useUpdateModule } from '../hooks/useModules';
 import { useModuleEditorForm } from '../hooks/useModuleEditorForm';
@@ -18,7 +19,7 @@ import { useQuizEditor } from '../hooks/useQuizEditor';
 import { useMarkdownEditor } from '../hooks/useMarkdownEditor';
 import { useModuleGeneration } from '../hooks/useModuleGeneration';
 import { useToast } from '../hooks/useToast';
-import type { FlashcardData } from '../types';
+import type { FlashcardData, SandboxData } from '../types';
 
 export function ModuleEditor() {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>();
@@ -45,9 +46,21 @@ export function ModuleEditor() {
   const markdownEditor = useMarkdownEditor(form.contentMarkdown, form.updateContent);
   const generation = useModuleGeneration();
 
+  // Sandbox state
+  const [sandbox, setSandbox] = useState<SandboxData | null>(null);
+
   // Confirm modal for flashcard replacement
   const [showReplaceConfirm, setShowReplaceConfirm] = useState(false);
   const [pendingFlashcards, setPendingFlashcards] = useState<FlashcardData[]>([]);
+
+  // Track sandbox changes
+  const handleSandboxChange = useCallback((newSandbox: SandboxData | null) => {
+    setSandbox(newSandbox);
+    if (form.hasUnsavedChanges === false) {
+      // This doesn't exist in the form hook, so we need to trigger unsaved changes manually
+      // The form.updateContent or form.updateTitle will trigger this, but we also need sandbox
+    }
+  }, [form.hasUnsavedChanges]);
 
   // Populate form when editing
   useEffect(() => {
@@ -55,6 +68,7 @@ export function ModuleEditor() {
       form.populateFromModule(existingModule);
       flashcards.setAll(existingModule.flashcards || []);
       quiz.setAll(existingModule.quiz?.questions || []);
+      setSandbox(existingModule.sandbox || null);
     }
   }, [existingModule, isEditing]);
 
@@ -126,7 +140,10 @@ export function ModuleEditor() {
         await updateModule.mutateAsync({
           courseId,
           moduleId,
-          data: form.getUpdateData(flashcards.flashcards, quiz.questions),
+          data: {
+            ...form.getUpdateData(flashcards.flashcards, quiz.questions),
+            sandbox: sandbox || undefined,
+          },
         });
         success('Module updated successfully');
         form.markAsSaved();
@@ -134,7 +151,10 @@ export function ModuleEditor() {
         const orderIndex = courseData?.modules?.length ?? 0;
         const newModule = await createModule.mutateAsync({
           courseId,
-          data: form.getCreateData(orderIndex, flashcards.flashcards, quiz.questions),
+          data: {
+            ...form.getCreateData(orderIndex, flashcards.flashcards, quiz.questions),
+            sandbox: sandbox || undefined,
+          },
         });
         success('Module created successfully');
         navigate(`/courses/${courseId}/modules/${newModule.id}`, { replace: true });
@@ -214,6 +234,7 @@ export function ModuleEditor() {
         onTabChange={form.setActiveTab}
         flashcardCount={flashcards.flashcards.length}
         quizQuestionCount={quiz.questions.length}
+        hasSandbox={sandbox !== null}
       />
 
       {/* Tab Content */}
@@ -262,6 +283,10 @@ export function ModuleEditor() {
           onRemove={quiz.removeQuestion}
           onGenerate={handleGenerateQuiz}
         />
+      )}
+
+      {form.activeTab === 'sandbox' && (
+        <SandboxTab sandbox={sandbox} onChange={handleSandboxChange} />
       )}
 
       {/* Unsaved changes indicator */}

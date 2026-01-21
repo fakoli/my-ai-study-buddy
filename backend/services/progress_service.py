@@ -98,6 +98,10 @@ class ProgressService:
             if progress["status"] == "not_started":
                 progress["status"] = "in_progress"
                 progress["started_at"] = now.isoformat()
+            await self._log_activity(
+                user_id, "flashcard_reviewed", module_id, course_id,
+                {"cards_reviewed": progress["flashcards_reviewed"]}
+            )
 
         elif data.action == "submit_quiz":
             progress["quiz_attempts"] = progress.get("quiz_attempts", 0) + 1

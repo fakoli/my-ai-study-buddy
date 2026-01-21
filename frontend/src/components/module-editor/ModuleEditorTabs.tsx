@@ -1,4 +1,4 @@
-import { BookOpen, FileText, HelpCircle } from 'lucide-react';
+import { BookOpen, FileText, HelpCircle, Code } from 'lucide-react';
 import type { EditorTab } from '../../hooks/useModuleEditorForm';
 
 export interface ModuleEditorTabsProps {
@@ -6,6 +6,7 @@ export interface ModuleEditorTabsProps {
   onTabChange: (tab: EditorTab) => void;
   flashcardCount: number;
   quizQuestionCount: number;
+  hasSandbox?: boolean;
 }
 
 export function ModuleEditorTabs({
@@ -13,8 +14,9 @@ export function ModuleEditorTabs({
   onTabChange,
   flashcardCount,
   quizQuestionCount,
+  hasSandbox = false,
 }: ModuleEditorTabsProps) {
-  const tabs: { key: EditorTab; label: string; icon: React.ReactNode; count?: number }[] = [
+  const tabs: { key: EditorTab; label: string; icon: React.ReactNode; count?: number; indicator?: string }[] = [
     { key: 'content', label: 'Content', icon: <BookOpen className="w-4 h-4" /> },
     {
       key: 'flashcards',
@@ -27,6 +29,12 @@ export function ModuleEditorTabs({
       label: 'Quiz',
       icon: <HelpCircle className="w-4 h-4" />,
       count: quizQuestionCount,
+    },
+    {
+      key: 'sandbox',
+      label: 'Sandbox',
+      icon: <Code className="w-4 h-4" />,
+      indicator: hasSandbox ? undefined : '+',
     },
   ];
 
@@ -46,6 +54,9 @@ export function ModuleEditorTabs({
             {tab.icon}
             {tab.label}
             {tab.count !== undefined && ` (${tab.count})`}
+            {tab.indicator && (
+              <span className="text-gray-400 text-xs">{tab.indicator}</span>
+            )}
           </button>
         ))}
       </nav>

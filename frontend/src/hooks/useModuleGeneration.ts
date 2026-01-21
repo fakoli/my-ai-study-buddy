@@ -18,7 +18,7 @@ export interface GenerationOptions {
 export interface GenerationCallbacks {
   onContentGenerated: (content: string) => void;
   onFlashcardsGenerated: (flashcards: FlashcardData[], replace: boolean) => void;
-  onQuizGenerated: (questions: QuizQuestionData[]) => void;
+  onQuizGenerated: (questions: QuizQuestionData[], replace: boolean) => void;
   onVisualGenerated: (markdown: string) => void;
 }
 
@@ -95,7 +95,7 @@ export function useModuleGeneration() {
           callbacks.onFlashcardsGenerated(result.flashcards, true);
         }
         if (result.quiz && result.quiz.questions.length > 0) {
-          callbacks.onQuizGenerated(result.quiz.questions);
+          callbacks.onQuizGenerated(result.quiz.questions, true);
         }
 
         success(`Content generated! Used ${result.tokens_used} tokens.`);
@@ -183,7 +183,8 @@ export function useModuleGeneration() {
     async (
       courseId: string,
       moduleId: string,
-      callbacks: GenerationCallbacks
+      callbacks: GenerationCallbacks,
+      appendMode: boolean = false
     ) => {
       if (!moduleId || moduleId === 'new') {
         showError('Please save the module first before generating a quiz');
@@ -197,13 +198,42 @@ export function useModuleGeneration() {
           question_count: options.quizQuestionCount,
         });
 
-        callbacks.onQuizGenerated(result.quiz.questions);
+        callbacks.onQuizGenerated(result.quiz.questions, !appendMode);
         success(
           `Generated ${result.quiz.questions.length} questions! Used ${result.tokens_used} tokens.`
         );
       } catch (err) {
         console.error('Failed to generate quiz:', err);
         showError('Failed to generate quiz. Please try again.');
+      }
+    },
+    [options.quizQuestionCount, generateQuiz, success, showError]
+  );
+
+  // Generate more quiz questions (append mode)
+  const generateMoreQuizQuestions = useCallback(
+    async (courseId: string, moduleId: string) => {
+      if (!moduleId || moduleId === 'new') {
+        showError('Please save the module first before generating more questions');
+        return null;
+      }
+
+      try {
+        const result = await generateQuiz.mutateAsync({
+          course_id: courseId,
+          module_id: moduleId,
+          question_count: options.quizQuestionCount,
+        });
+
+        success(
+          `Generated ${result.quiz.questions.length} more questions! Used ${result.tokens_used} tokens.`
+        );
+
+        return result.quiz.questions;
+      } catch (err) {
+        console.error('Failed to generate more questions:', err);
+        showError('Failed to generate more questions. Please try again.');
+        return null;
       }
     },
     [options.quizQuestionCount, generateQuiz, success, showError]
@@ -250,6 +280,7 @@ export function useModuleGeneration() {
     handleGenerateFlashcards,
     generateFlashcardsAsync,
     handleGenerateQuiz,
+    generateMoreQuizQuestions,
     handleGenerateVisual,
     isPendingContent: generateContent.isPending,
     isPendingFlashcards: generateFlashcards.isPending,

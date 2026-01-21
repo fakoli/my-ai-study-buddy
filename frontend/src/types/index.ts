@@ -491,6 +491,7 @@ export interface CourseWithModulesResponse {
 
 // Module types
 export interface FlashcardData {
+  id?: string;
   front: string;
   back: string;
   visual?: string;
@@ -507,6 +508,15 @@ export interface QuizData {
   questions: QuizQuestionData[];
 }
 
+export type SandboxLanguage = 'python' | 'javascript';
+
+export interface SandboxData {
+  language: SandboxLanguage;
+  starter_code: string;
+  solution_code?: string;
+  instructions?: string;
+}
+
 export interface Module {
   id: string;
   course_id: string;
@@ -515,6 +525,7 @@ export interface Module {
   content_markdown: string;
   flashcards: FlashcardData[];
   quiz: QuizData | null;
+  sandbox: SandboxData | null;
   created_at: string;
   updated_at: string;
 }
@@ -533,6 +544,7 @@ export interface ModuleCreate {
   content_markdown?: string;
   flashcards?: FlashcardData[];
   quiz?: QuizData;
+  sandbox?: SandboxData;
 }
 
 export interface ModuleUpdate {
@@ -541,6 +553,7 @@ export interface ModuleUpdate {
   content_markdown?: string;
   flashcards?: FlashcardData[];
   quiz?: QuizData;
+  sandbox?: SandboxData;
 }
 
 // Learning Path types
@@ -785,3 +798,67 @@ export interface AdminStatsResponse {
   user_count: number;
   total_tokens: number;
 }
+
+// ============================================
+// Flashcard Rating Types
+// ============================================
+
+/** Rating options for flashcards */
+export type FlashcardRating = 'easy' | 'medium' | 'hard' | 'unhelpful';
+
+/** Request to rate a flashcard */
+export interface RateFlashcardRequest {
+  flashcard_index: number;
+  flashcard_id?: string;
+  rating: FlashcardRating;
+}
+
+/** Response after rating a flashcard */
+export interface FlashcardRatingResponse {
+  flashcard_index: number;
+  rating: FlashcardRating;
+  updated: boolean;
+}
+
+/** A user's rating record for a flashcard */
+export interface FlashcardRatingRecord {
+  id: string;
+  user_id: string;
+  course_id: string;
+  module_id: string;
+  flashcard_index: number;
+  flashcard_id?: string;
+  rating: FlashcardRating;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Summary of ratings for a module's flashcards */
+export interface FlashcardRatingSummary {
+  total: number;
+  unrated: number;
+  easy: number;
+  medium: number;
+  hard: number;
+  unhelpful: number;
+}
+
+/** A flashcard with its rating status */
+export interface FilteredFlashcard {
+  index: number;
+  id?: string;
+  front: string;
+  back: string;
+  visual?: string;
+  rating?: FlashcardRating;
+}
+
+/** Response containing filtered flashcards */
+export interface FilteredFlashcardsResponse {
+  flashcards: FilteredFlashcard[];
+  filter_applied: string;
+  total: number;
+}
+
+/** Filter options for flashcards */
+export type FlashcardFilter = 'all' | 'unrated' | FlashcardRating;

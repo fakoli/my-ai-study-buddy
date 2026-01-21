@@ -10,14 +10,18 @@ import {
   FileText,
   HelpCircle,
   GripVertical,
+  CheckCircle2,
+  Circle,
+  Clock,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 import { useCourse, useDeleteCourse } from '../hooks/useCourses';
 import { useDeleteModule } from '../hooks/useModules';
+import { useCourseProgress } from '../hooks/useProgress';
 import { useToast } from '../hooks/useToast';
-import type { ModuleSummary, CourseDifficulty } from '../types';
+import type { ModuleSummary, CourseDifficulty, ModuleProgressStatus } from '../types';
 
 const difficultyColors: Record<CourseDifficulty, { bg: string; text: string }> = {
   beginner: { bg: 'bg-green-100', text: 'text-green-700' },
@@ -31,8 +35,17 @@ export function CourseDetail() {
   const { success, error: showError } = useToast();
 
   const { data, isLoading, error } = useCourse(courseId || '');
+  const { data: progressData } = useCourseProgress(courseId || '');
   const deleteCourse = useDeleteCourse();
   const deleteModule = useDeleteModule();
+
+  // Create a map of module progress for easy lookup
+  const moduleProgressMap = new Map<string, ModuleProgressStatus>();
+  if (progressData?.modules) {
+    progressData.modules.forEach((mp) => {
+      moduleProgressMap.set(mp.module_id, mp);
+    });
+  }
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [moduleToDelete, setModuleToDelete] = useState<ModuleSummary | null>(null);
@@ -160,6 +173,41 @@ export function CourseDetail() {
         </CardContent>
       </Card>
 
+      {/* Course Progress */}
+      {progressData && progressData.total_modules > 0 && (
+        <Card>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">
+                  {progressData.completed_modules} of {progressData.total_modules} modules completed
+                </span>
+                <span className="font-medium text-indigo-600">
+                  {progressData.completion_percentage}%
+                </span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                  style={{ width: `${progressData.completion_percentage}%` }}
+                />
+              </div>
+              <div className="flex items-center gap-6 text-sm text-gray-500">
+                {progressData.average_quiz_score !== null && (
+                  <span>Avg Quiz Score: {progressData.average_quiz_score}%</span>
+                )}
+                {progressData.total_time_spent_minutes > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {progressData.total_time_spent_minutes} min studied
+                  </span>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* AI Instructions (if applicable) */}
       {course.ai_enabled && course.instructions && (
         <Card>
@@ -224,59 +272,78 @@ export function CourseDetail() {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {modules.map((module, index) => (
-                <Link
-                  key={module.id}
-                  to={`/courses/${courseId}/modules/${module.id}`}
-                  className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="text-gray-400">
-                    <GripVertical className="w-5 h-5" />
-                  </div>
-                  <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-medium">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">{module.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
-                      {module.flashcard_count > 0 && (
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-4 h-4" />
-                          {module.flashcard_count} cards
-                        </span>
-                      )}
-                      {module.has_quiz && (
-                        <span className="flex items-center gap-1">
-                          <HelpCircle className="w-4 h-4" />
-                          Quiz
-                        </span>
+              {modules.map((module, index) => {
+                const moduleProgress = moduleProgressMap.get(module.id);
+                const status = moduleProgress?.status || 'not_started';
+
+                return (
+                  <Link
+                    key={module.id}
+                    to={`/courses/${courseId}/modules/${module.id}`}
+                    className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="text-gray-400">
+                      <GripVertical className="w-5 h-5" />
+                    </div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      status === 'completed'
+                        ? 'bg-green-100 text-green-600'
+                        : status === 'in_progress'
+                        ? 'bg-indigo-100 text-indigo-600'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {status === 'completed' ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : status === 'in_progress' ? (
+                        <Clock className="w-4 h-4" />
+                      ) : (
+                        <Circle className="w-4 h-4" />
                       )}
                     </div>
-                  </div>
-                  {isEditable && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          navigate(`/courses/${courseId}/modules/${module.id}/edit`);
-                        }}
-                        className="p-2 hover:bg-gray-100 rounded"
-                      >
-                        <Edit className="w-4 h-4 text-gray-400" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setModuleToDelete(module);
-                        }}
-                        className="p-2 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">{module.title}</h3>
+                      <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                        {module.flashcard_count > 0 && (
+                          <span className="flex items-center gap-1">
+                            <FileText className="w-4 h-4" />
+                            {moduleProgress ? `${moduleProgress.flashcards_reviewed}/${moduleProgress.flashcards_total}` : `${module.flashcard_count}`} cards
+                          </span>
+                        )}
+                        {module.has_quiz && (
+                          <span className="flex items-center gap-1">
+                            <HelpCircle className="w-4 h-4" />
+                            {moduleProgress?.quiz_score !== null && moduleProgress?.quiz_score !== undefined
+                              ? `Quiz: ${moduleProgress.quiz_score}%`
+                              : 'Quiz'}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </Link>
-              ))}
+                    {isEditable && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigate(`/courses/${courseId}/modules/${module.id}/edit`);
+                          }}
+                          className="p-2 hover:bg-gray-100 rounded"
+                        >
+                          <Edit className="w-4 h-4 text-gray-400" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setModuleToDelete(module);
+                          }}
+                          className="p-2 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+                        </button>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </CardContent>
