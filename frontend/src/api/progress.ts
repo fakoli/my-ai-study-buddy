@@ -2,6 +2,7 @@ import { api } from './client';
 import type {
   CourseProgressStatus,
   DashboardStats,
+  ModuleProgressStatus,
   NextUpResponse,
   PathProgressStatus,
   ProgressStats,
@@ -9,6 +10,14 @@ import type {
   SessionsResponse,
   TopicMasteryResponse,
 } from '../types';
+
+export type ModuleProgressAction = 'start' | 'complete' | 'read_content' | 'review_flashcard' | 'submit_quiz';
+
+export interface UpdateModuleProgressRequest {
+  action: ModuleProgressAction;
+  quiz_score?: number;
+  time_spent_minutes?: number;
+}
 
 export const progressApi = {
   // New dashboard endpoints
@@ -25,6 +34,9 @@ export const progressApi = {
 
   getPathProgress: (pathId: string) =>
     api.get<PathProgressStatus>(`/progress/paths/${pathId}`),
+
+  updateModuleProgress: (courseId: string, moduleId: string, data: UpdateModuleProgressRequest) =>
+    api.post<ModuleProgressStatus>(`/progress/modules/${courseId}/${moduleId}`, data),
 
   // Legacy endpoints (deprecated)
   /** @deprecated Use getDashboardStats instead */

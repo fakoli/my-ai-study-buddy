@@ -5,10 +5,13 @@ import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import mermaid from 'mermaid';
+import { RunnableCodeBlock } from './RunnableCodeBlock';
+import type { SandboxLanguage } from '../../types';
 
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  enableRunnable?: boolean;
 }
 
 // Initialize mermaid with default config
@@ -65,7 +68,9 @@ function MermaidDiagram({ chart }: { chart: string }) {
   );
 }
 
-export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+const RUNNABLE_LANGUAGES = ['python', 'javascript', 'js', 'py'];
+
+export function MarkdownRenderer({ content, className = '', enableRunnable = false }: MarkdownRendererProps) {
   return (
     <div className={`prose prose-indigo max-w-none ${className}`}>
       <ReactMarkdown
@@ -84,6 +89,13 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             // Handle mermaid diagrams
             if (language === 'mermaid') {
               return <MermaidDiagram chart={codeString} />;
+            }
+
+            // Handle runnable code blocks (Python/JavaScript)
+            if (enableRunnable && isCodeBlock && RUNNABLE_LANGUAGES.includes(language)) {
+              const normalizedLanguage: SandboxLanguage =
+                language === 'js' || language === 'javascript' ? 'javascript' : 'python';
+              return <RunnableCodeBlock code={codeString} language={normalizedLanguage} />;
             }
 
             // Handle regular code blocks with syntax highlighting

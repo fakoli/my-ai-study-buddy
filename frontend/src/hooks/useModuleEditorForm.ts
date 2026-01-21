@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import type { Module, FlashcardData, QuizQuestionData, ModuleCreate, ModuleUpdate } from '../types';
 
-export type EditorTab = 'content' | 'flashcards' | 'quiz';
+export type EditorTab = 'content' | 'flashcards' | 'quiz' | 'sandbox';
 
 export interface ModuleFormState {
   title: string;

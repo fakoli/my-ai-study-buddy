@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { progressApi } from '../api/progress';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { progressApi, type UpdateModuleProgressRequest } from '../api/progress';
 
 // New hooks for path/course/module progress
 
@@ -37,6 +37,27 @@ export function usePathProgress(pathId: string) {
     queryKey: ['progress', 'paths', pathId],
     queryFn: () => progressApi.getPathProgress(pathId),
     enabled: !!pathId,
+  });
+}
+
+export function useUpdateModuleProgress() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      courseId,
+      moduleId,
+      data,
+    }: {
+      courseId: string;
+      moduleId: string;
+      data: UpdateModuleProgressRequest;
+    }) => progressApi.updateModuleProgress(courseId, moduleId, data),
+    onSuccess: (_, { courseId }) => {
+      queryClient.invalidateQueries({ queryKey: ['progress', 'dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['progress', 'courses', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['progress', 'activity'] });
+    },
   });
 }
 

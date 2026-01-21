@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -6,6 +7,7 @@ from pydantic import BaseModel, Field
 class FlashcardData(BaseModel):
     """Flashcard within a module."""
 
+    id: str | None = None  # Optional ID for tracking ratings
     front: str
     back: str
     visual: str | None = None  # Relative path to visual
@@ -26,6 +28,15 @@ class QuizData(BaseModel):
     questions: list[QuizQuestionData] = Field(default_factory=list)
 
 
+class SandboxData(BaseModel):
+    """Code sandbox for hands-on practice within a module."""
+
+    language: Literal["python", "javascript"] = "python"
+    starter_code: str = ""
+    solution_code: str | None = None
+    instructions: str | None = None
+
+
 class ModuleBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     order_index: int = Field(..., ge=0)
@@ -35,6 +46,7 @@ class ModuleCreate(ModuleBase):
     content_markdown: str = ""
     flashcards: list[FlashcardData] = Field(default_factory=list)
     quiz: QuizData | None = None
+    sandbox: SandboxData | None = None
 
 
 class ModuleUpdate(BaseModel):
@@ -43,6 +55,7 @@ class ModuleUpdate(BaseModel):
     content_markdown: str | None = None
     flashcards: list[FlashcardData] | None = None
     quiz: QuizData | None = None
+    sandbox: SandboxData | None = None
 
 
 class Module(ModuleBase):
@@ -51,6 +64,7 @@ class Module(ModuleBase):
     content_markdown: str = ""
     flashcards: list[FlashcardData] = Field(default_factory=list)
     quiz: QuizData | None = None
+    sandbox: SandboxData | None = None
     created_at: datetime
     updated_at: datetime
 

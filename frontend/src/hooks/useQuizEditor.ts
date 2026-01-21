@@ -53,6 +53,10 @@ export function useQuizEditor(initialQuestions: QuizQuestionData[] = []) {
     setQuestions(newQuestions);
   }, []);
 
+  const appendQuestions = useCallback((newQuestions: QuizQuestionData[]) => {
+    setQuestions((prev) => [...prev, ...newQuestions]);
+  }, []);
+
   const getValidQuestions = useCallback(() => {
     return questions.filter(
       (q) => q.question.trim() && q.options.some((o) => o.trim())
@@ -67,6 +71,7 @@ export function useQuizEditor(initialQuestions: QuizQuestionData[] = []) {
     removeQuestion,
     replaceAll,
     setAll,
+    appendQuestions,
     getValidQuestions,
   };
 }
