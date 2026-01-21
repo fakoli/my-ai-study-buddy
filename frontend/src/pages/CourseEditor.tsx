@@ -77,7 +77,7 @@ export function CourseEditor() {
     target_audience: '',
     learning_objectives: [''],
     tone: '',
-    additional_context: null,
+    additional_context: undefined,
   });
 
   // Module outlines state
@@ -444,7 +444,7 @@ export function CourseEditor() {
           instructions: aiEnabled ? {
             ...instructions,
             learning_objectives: instructions.learning_objectives.filter((o) => o.trim()),
-            additional_context: instructions.additional_context || null,
+            additional_context: instructions.additional_context || undefined,
           } : undefined,
         };
         await updateCourse.mutateAsync({ courseId, data: updateData });
@@ -461,7 +461,7 @@ export function CourseEditor() {
           instructions: aiEnabled ? {
             ...instructions,
             learning_objectives: instructions.learning_objectives.filter((o) => o.trim()),
-            additional_context: instructions.additional_context || null,
+            additional_context: instructions.additional_context || undefined,
           } : undefined,
         };
         const newCourse = await createCourse.mutateAsync(createData);
@@ -830,7 +830,7 @@ export function CourseEditor() {
                 onChange={(e) =>
                   setInstructions({
                     ...instructions,
-                    additional_context: e.target.value || null,
+                    additional_context: e.target.value || undefined,
                   })
                 }
                 placeholder="Any other guidance for the AI when generating content..."

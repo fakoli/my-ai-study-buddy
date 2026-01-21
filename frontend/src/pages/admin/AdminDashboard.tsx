@@ -360,8 +360,7 @@ export function AdminDashboard() {
               placeholder="e.g., 50 or -25"
               value={adjustAmount}
               onChange={(e) => setAdjustAmount(e.target.value)}
-              helperText="Positive to add, negative to deduct (min: -1,000,000, max: 1,000,000)"
-              aria-describedby="adjust-amount-helper"
+              hint="Positive to add, negative to deduct (min: -1,000,000, max: 1,000,000)"
             />
 
             <Input

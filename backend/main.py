@@ -139,15 +139,12 @@ async def health_check():
 
 
 # Import and register routers
-from api.routes import auth, decks, reviews, quiz, progress, references, ai, notifications
+from api.routes import auth, progress, references, ai, notifications
 from api.routes import courses, learning_paths, modules, uploads, generation
 from api.routes import user_settings, admin
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(user_settings.router, prefix="/api/v1/auth", tags=["auth"])
-app.include_router(decks.router, prefix="/api/v1/decks", tags=["decks"])
-app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["reviews"])
-app.include_router(quiz.router, prefix="/api/v1/quiz", tags=["quiz"])
 app.include_router(progress.router, prefix="/api/v1/progress", tags=["progress"])
 app.include_router(references.router, prefix="/api/v1/references", tags=["references"])
 app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
