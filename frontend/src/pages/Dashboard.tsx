@@ -59,19 +59,19 @@ export function Dashboard() {
         </div>
         <div className="space-y-4">
           <ActionCard
-            type="study"
+            type="paths"
             title="Learning Paths"
             description="Follow structured learning journeys"
             href="/paths"
           />
           <ActionCard
-            type="quiz"
+            type="study"
             title="Browse Courses"
             description="Explore and study course modules"
-            href="/courses"
+            href="/courses?tab=discover"
           />
           <ActionCard
-            type="review"
+            type="create"
             title="Create Course"
             description="Author your own course content"
             href="/courses/new"

@@ -99,58 +99,69 @@ export function Settings() {
       <Card>
         <CardHeader>
           <h3 className="font-medium text-gray-900">API Keys</h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             Provide your own API keys to use AI features. Your keys are encrypted before storage.
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Validation message */}
+          {validationMessage && (
+            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${validationMessage.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              {validationMessage.message}
+            </div>
+          )}
+
           {/* Anthropic Key */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+          <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-medium text-gray-900">Anthropic (Claude)</p>
-                <p className="text-sm text-gray-500">Used for AI-powered content generation</p>
+                <p className="font-semibold text-gray-900">Anthropic (Claude)</p>
+                <p className="text-sm text-gray-600">Used for AI-powered content generation</p>
               </div>
               {getKeyForProvider('anthropic') && (
-                <span className={`text-xs px-2 py-1 rounded ${getKeyForProvider('anthropic')?.is_valid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getKeyForProvider('anthropic')?.is_valid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {getKeyForProvider('anthropic')?.is_valid ? 'Valid' : 'Invalid'}
                 </span>
               )}
             </div>
             {getKeyForProvider('anthropic') ? (
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-gray-100 rounded text-sm text-gray-600">
-                  {getKeyForProvider('anthropic')?.key_hint}
-                </code>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleValidateKey('anthropic')}
-                  isLoading={validateApiKey.isPending}
-                >
-                  Validate
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleDeleteKey('anthropic')}
-                  isLoading={deleteApiKey.isPending}
-                >
-                  Remove
-                </Button>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+                  <span className="text-sm text-gray-500">Current key:</span>
+                  <code className="flex-1 text-sm font-mono text-gray-700">
+                    ••••••••{getKeyForProvider('anthropic')?.key_hint}
+                  </code>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleValidateKey('anthropic')}
+                    isLoading={validateApiKey.isPending}
+                  >
+                    Validate
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDeleteKey('anthropic')}
+                    isLoading={deleteApiKey.isPending}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="flex gap-2">
+              <div className="space-y-3">
                 <Input
                   id="anthropic-key"
                   type="password"
-                  placeholder="sk-ant-..."
+                  placeholder="sk-ant-api03-..."
                   value={selectedProvider === 'anthropic' ? newApiKey : ''}
                   onChange={(e) => {
                     setSelectedProvider('anthropic');
                     setNewApiKey(e.target.value);
                   }}
-                  className="flex-1"
                 />
                 <Button
                   variant="primary"
@@ -161,49 +172,54 @@ export function Settings() {
                   isLoading={setApiKey.isPending && selectedProvider === 'anthropic'}
                   disabled={selectedProvider !== 'anthropic' || !newApiKey}
                 >
-                  Save
+                  Save API Key
                 </Button>
               </div>
             )}
           </div>
 
           {/* Gemini Key */}
-          <div className="space-y-3 pt-4 border-t">
-            <div className="flex items-center justify-between">
+          <div className="p-4 bg-gray-50 rounded-lg space-y-4">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-medium text-gray-900">Google Gemini</p>
-                <p className="text-sm text-gray-500">Used for AI-powered image generation</p>
+                <p className="font-semibold text-gray-900">Google Gemini</p>
+                <p className="text-sm text-gray-600">Used for AI-powered image generation</p>
               </div>
               {getKeyForProvider('gemini') && (
-                <span className={`text-xs px-2 py-1 rounded ${getKeyForProvider('gemini')?.is_valid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getKeyForProvider('gemini')?.is_valid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                   {getKeyForProvider('gemini')?.is_valid ? 'Valid' : 'Invalid'}
                 </span>
               )}
             </div>
             {getKeyForProvider('gemini') ? (
-              <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 bg-gray-100 rounded text-sm text-gray-600">
-                  {getKeyForProvider('gemini')?.key_hint}
-                </code>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleValidateKey('gemini')}
-                  isLoading={validateApiKey.isPending}
-                >
-                  Validate
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleDeleteKey('gemini')}
-                  isLoading={deleteApiKey.isPending}
-                >
-                  Remove
-                </Button>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
+                  <span className="text-sm text-gray-500">Current key:</span>
+                  <code className="flex-1 text-sm font-mono text-gray-700">
+                    ••••••••{getKeyForProvider('gemini')?.key_hint}
+                  </code>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleValidateKey('gemini')}
+                    isLoading={validateApiKey.isPending}
+                  >
+                    Validate
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDeleteKey('gemini')}
+                    isLoading={deleteApiKey.isPending}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="flex gap-2">
+              <div className="space-y-3">
                 <Input
                   id="gemini-key"
                   type="password"
@@ -213,7 +229,6 @@ export function Settings() {
                     setSelectedProvider('gemini');
                     setNewApiKey(e.target.value);
                   }}
-                  className="flex-1"
                 />
                 <Button
                   variant="primary"
@@ -224,18 +239,11 @@ export function Settings() {
                   isLoading={setApiKey.isPending && selectedProvider === 'gemini'}
                   disabled={selectedProvider !== 'gemini' || !newApiKey}
                 >
-                  Save
+                  Save API Key
                 </Button>
               </div>
             )}
           </div>
-
-          {/* Validation message */}
-          {validationMessage && (
-            <div className={`p-3 rounded text-sm ${validationMessage.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-              {validationMessage.message}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -243,88 +251,94 @@ export function Settings() {
         <CardHeader>
           <h3 className="font-medium text-gray-900">Notifications</h3>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
+        <CardContent className="space-y-1">
+          {/* Email notifications toggle */}
+          <button
+            onClick={() => updatePrefs.mutate({ email_enabled: !prefs?.email_enabled })}
+            className="w-full flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <div className="text-left">
               <p className="font-medium text-gray-900">Email notifications</p>
-              <p className="text-sm text-gray-500">Receive reminders and updates via email</p>
+              <p className="text-sm text-gray-600">Receive reminders and updates via email</p>
             </div>
-            <button
-              onClick={() => updatePrefs.mutate({ email_enabled: !prefs?.email_enabled })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                prefs?.email_enabled ? 'bg-indigo-600' : 'bg-gray-200'
+            <div
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-4 ${
+                prefs?.email_enabled ? 'bg-indigo-600' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                   prefs?.email_enabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">Daily quiz</p>
-              <p className="text-sm text-gray-500">Receive a daily quiz via SMS</p>
             </div>
-            <button
-              onClick={() => updatePrefs.mutate({ daily_quiz_enabled: !prefs?.daily_quiz_enabled })}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                prefs?.daily_quiz_enabled ? 'bg-indigo-600' : 'bg-gray-200'
+          </button>
+
+          {/* Daily quiz toggle */}
+          <button
+            onClick={() => updatePrefs.mutate({ daily_quiz_enabled: !prefs?.daily_quiz_enabled })}
+            className="w-full flex items-center justify-between p-3 -mx-3 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <div className="text-left">
+              <p className="font-medium text-gray-900">Daily quiz</p>
+              <p className="text-sm text-gray-600">Receive a daily quiz via SMS</p>
+            </div>
+            <div
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-4 ${
+                prefs?.daily_quiz_enabled ? 'bg-indigo-600' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                   prefs?.daily_quiz_enabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
-            </button>
-          </div>
-
-          <div className="pt-4 border-t">
-            <div className="flex gap-2 items-end">
-              <div className="flex-1">
-                <Input
-                  id="phone"
-                  label="Phone Number"
-                  value={phoneNumber || prefs?.phone_number || ''}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="+1234567890"
-                />
-              </div>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  if (phoneNumber) {
-                    updatePrefs.mutate({ phone_number: phoneNumber, sms_enabled: true });
-                  }
-                }}
-                isLoading={updatePrefs.isPending}
-              >
-                Save
-              </Button>
             </div>
-          </div>
+          </button>
 
-          <div className="flex gap-2 pt-4">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => testEmail.mutate()}
-              isLoading={testEmail.isPending}
-            >
-              Test Email
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => testSms.mutate()}
-              isLoading={testSms.isPending}
-              disabled={!prefs?.phone_number}
-            >
-              Test SMS
-            </Button>
+          {/* Phone number section */}
+          <div className="pt-4 mt-4 border-t border-gray-100">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+            <div className="space-y-3">
+              <Input
+                id="phone"
+                value={phoneNumber || prefs?.phone_number || ''}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="+1 (555) 123-4567"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    if (phoneNumber) {
+                      updatePrefs.mutate({ phone_number: phoneNumber, sms_enabled: true });
+                    }
+                  }}
+                  isLoading={updatePrefs.isPending}
+                  disabled={!phoneNumber || phoneNumber === prefs?.phone_number}
+                >
+                  Save Number
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => testEmail.mutate()}
+                  isLoading={testEmail.isPending}
+                >
+                  Test Email
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => testSms.mutate()}
+                  isLoading={testSms.isPending}
+                  disabled={!prefs?.phone_number}
+                >
+                  Test SMS
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

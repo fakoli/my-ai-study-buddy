@@ -159,6 +159,7 @@ export function Courses() {
           courses={myCourses ?? []}
           onCreateCourse={() => navigate('/courses/new')}
           showAuthor={false}
+          showCreateButton={false}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -170,8 +171,18 @@ export function Courses() {
             />
           ))}
           {discoverData?.courses.length === 0 && (
-            <div className="col-span-full text-center py-8 text-gray-500">
-              No courses found. Try adjusting your search or filters.
+            <div className="col-span-full">
+              <div className="text-center py-12 px-4">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Search className="w-6 h-6 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-1">No courses found</h3>
+                <p className="text-sm text-gray-500 max-w-sm mx-auto">
+                  {searchQuery || difficultyFilter
+                    ? "Try adjusting your search or filters to find more courses."
+                    : "No public courses are available yet. Check back soon!"}
+                </p>
+              </div>
             </div>
           )}
         </div>

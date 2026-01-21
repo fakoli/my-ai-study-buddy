@@ -55,9 +55,17 @@ export function RecentActivityFeed({ activities }: RecentActivityFeedProps) {
           <h3 className="font-medium text-gray-900">Recent Activity</h3>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500 text-center py-4">
-            No recent activity. Start learning to see your progress here.
-          </p>
+          <div className="text-center py-6">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-indigo-50 flex items-center justify-center">
+              <PlayCircle className="w-6 h-6 text-indigo-400" />
+            </div>
+            <p className="text-sm font-medium text-gray-700 mb-1">
+              Ready to get started?
+            </p>
+            <p className="text-sm text-gray-500">
+              Your learning activity will appear here as you explore courses.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
