@@ -33,8 +33,8 @@ npm install
 npm run dev
 
 # Testing (prefer file-scoped)
-uv run pytest backend/tests/test_decks.py -v
-npm run test -- --filter=FlashCard
+uv run pytest backend/tests/test_modules.py -v
+npm run test -- --filter=FlashcardItem
 
 # Linting
 uv run ruff check backend/
@@ -55,7 +55,7 @@ npm run lint --prefix frontend
     config.py                   # Settings and environment
     dependencies.py             # Type aliases (StorageDep, CurrentUser, etc.)
     exceptions.py               # Error codes and exceptions
-    /api/routes                 # 15 route files
+    /api/routes                 # 13 route files
       admin.py                  # Admin console endpoints
       auth.py                   # Authentication
       courses.py                # Course management
@@ -64,32 +64,43 @@ npm run lint --prefix frontend
       learning_paths.py         # Learning paths
       user_settings.py          # API key management
       uploads.py                # Image uploads
+      progress.py               # Progress tracking
+      flashcard_ratings.py      # Flashcard difficulty ratings
       ...
-    /models                     # 14 Pydantic model files
+    /models                     # 11 Pydantic model files
       user.py                   # User + UserRole
       course.py                 # Course + CourseInstructions
-      module.py                 # Module + FlashcardData + QuizData
+      module.py                 # Module + FlashcardData + QuizData + SandboxData
       learning_path.py          # Learning paths
+      progress.py               # Progress tracking models
+      flashcard_rating.py       # Flashcard rating models
       token_transaction.py      # Token history
       user_api_settings.py      # API key settings
       ...
-    /services                   # 18 service files
+    /services                   # 20 service files
       admin_service.py          # User management
       ai_generation_service.py  # AI content generation
       encryption_service.py     # API key encryption
       module_service.py         # Module operations
+      flashcard_rating_service.py # Flashcard ratings
+      course_orchestrator.py    # Full course generation
+      cache_service.py          # In-memory caching
+      ai_model_router.py        # Model selection
       ...
     /storage
       base.py                   # StorageBackend ABC
       json_storage.py           # Development storage
   /frontend/src
-    /api                        # 16 API client files
-    /hooks                      # 15 custom hooks
-    /pages                      # 15 page components
+    /api                        # 14 API client files
+    /hooks                      # 26 custom hooks
+    /pages                      # 12 page components
       CourseEditor.tsx          # Course authoring
       ModuleEditor.tsx          # Module authoring
+      ModuleViewer.tsx          # Module learning view
       Settings.tsx              # User settings + API keys
-    /components
+    /components                 # 45 component files
+    /services                   # Code execution services
+      codeExecution.ts          # Pyodide/Worker execution
   /content/courses              # Filesystem-based courses
 ```
 
@@ -174,14 +185,12 @@ npm run lint --prefix frontend
 
 ## API Overview
 
-All routes defined in @docs/architecture.md (74+ endpoints total)
+All routes defined in @docs/architecture.md (70+ endpoints total)
 
 | Resource | Endpoints | Purpose |
 |----------|-----------|---------|
-| `/api/v1/decks` | 8 | Flashcard CRUD |
-| `/api/v1/reviews` | 3 | Spaced repetition tracking |
-| `/api/v1/quiz` | 3 | Quiz generation and submission |
-| `/api/v1/progress` | 3 | Stats and session history |
+| `/api/v1/progress` | 10 | Dashboard, module/course/path progress |
+| `/api/v1/courses/.../flashcards` | 6 | Flashcard ratings and filtering |
 | `/api/v1/references` | 3 | Reference material and visuals |
 | `/api/v1/ai` | 4 | Explanations, hints, examples |
 | `/api/v1/auth` | 6 | Registration, login, tokens |
@@ -189,7 +198,7 @@ All routes defined in @docs/architecture.md (74+ endpoints total)
 | `/api/v1/courses` | 7 | Course CRUD and discovery |
 | `/api/v1/courses/.../modules` | 7 | Module CRUD and reordering |
 | `/api/v1/paths` | 9 | Learning path management |
-| `/api/v1/generate` | 5 | AI content generation |
+| `/api/v1/generate` | 6 | AI content generation (including full-course) |
 | `/api/v1/uploads` | 3 | Image upload and serving |
 | `/api/v1/settings` | 4 | User API key management |
 | `/api/v1/admin` | 4 | Admin console (users, tokens) |
@@ -205,23 +214,31 @@ All routes defined in @docs/architecture.md (74+ endpoints total)
 
 | Pattern | Example Location |
 |---------|------------------|
-| API route | `backend/api/routes/decks.py` |
-| Pydantic model | `backend/models/deck.py` |
-| Service layer | `backend/services/quiz_service.py` |
+| API route | `backend/api/routes/courses.py` |
+| Pydantic model | `backend/models/module.py` |
+| Service layer | `backend/services/module_service.py` |
 | Storage backend | `backend/storage/json_storage.py` |
-| React component | `frontend/src/components/FlashCard.tsx` |
-| Custom hook | `frontend/src/hooks/useQuiz.ts` |
+| React component | `frontend/src/components/module-editor/FlashcardItem.tsx` |
+| Custom hook | `frontend/src/hooks/useModules.ts` |
 | Frontend API client | `frontend/src/api/courses.ts` |
 | Course model | `backend/models/course.py` |
 | Module model | `backend/models/module.py` |
 | Learning path model | `backend/models/learning_path.py` |
+| Progress model | `backend/models/progress.py` |
+| Flashcard rating | `backend/services/flashcard_rating_service.py` |
 | AI generation service | `backend/services/ai_generation_service.py` |
+| Course orchestrator | `backend/services/course_orchestrator.py` |
+| Cache service | `backend/services/cache_service.py` |
+| Model router | `backend/services/ai_model_router.py` |
 | Admin service | `backend/services/admin_service.py` |
 | Admin routes | `backend/api/routes/admin.py` |
 | Encryption service | `backend/services/encryption_service.py` |
 | Course editor page | `frontend/src/pages/CourseEditor.tsx` |
 | Module editor page | `frontend/src/pages/ModuleEditor.tsx` |
+| Module viewer page | `frontend/src/pages/ModuleViewer.tsx` |
 | Admin hook | `frontend/src/hooks/useAdmin.ts` |
+| Debounced search | `frontend/src/hooks/useDebouncedSearch.ts` |
+| Code sandbox | `frontend/src/services/codeExecution.ts` |
 | Type aliases | `backend/dependencies.py` |
 
 ## AI Generation
@@ -235,6 +252,17 @@ The `AIGenerationService` provides AI-powered content generation for courses:
 | `POST /generate/flashcards` | 8 | Generate flashcards from module content |
 | `POST /generate/quiz` | 10 | Generate quiz from module content |
 | `POST /generate/visual` | 5 | Generate educational images via Gemini |
+| `POST /generate/full-course` | Variable | Generate entire course with parallel orchestration |
+
+### Full Course Generation
+
+The `/generate/full-course` endpoint uses multi-phase orchestration:
+1. **Planning**: Generate module structure (~10 tokens)
+2. **Content**: Generate modules in parallel (~25 tokens/module)
+3. **Enrichment**: Generate flashcards and quizzes
+4. **Visuals**: Generate educational images (optional, ~5 tokens/visual)
+
+Typical cost for 8 modules with visuals: ~290 tokens
 
 ### Course Instructions
 
@@ -273,3 +301,57 @@ All token changes are logged with:
 - `operation`: "admin_adjustment", "generate_content", etc.
 - `reason`: human-readable explanation
 - `admin_id`: who made the change (for admin adjustments)
+
+## Flashcard Ratings
+
+Learners can rate flashcards to track difficulty and provide feedback to authors.
+
+### Rating Types
+
+| Rating | Purpose |
+|--------|---------|
+| `easy` | Flashcard was easy to recall |
+| `medium` | Required some thought |
+| `hard` | Struggled to remember |
+| `unhelpful` | Card is confusing or unhelpful |
+
+### Key Features
+
+- **Filter by rating**: `/flashcards/filter?filter_by=hard` to study difficult cards
+- **Author feedback**: `/feedback/unhelpful-cards` shows cards marked unhelpful
+- **Rating summary**: Track distribution of ratings per module
+- **Combined endpoint**: `/flashcards/ratings-with-summary` for efficient loading
+
+### Components
+
+- `FlashcardFilter.tsx`: Filter buttons for rating-based filtering
+- `RatingButtons.tsx`: Rating selection UI
+- `useFlashcardRatings.ts`: Hook for managing ratings state
+
+## Code Sandbox
+
+Modules can include interactive code sandboxes for hands-on practice.
+
+### Supported Languages
+
+| Language | Runtime | Notes |
+|----------|---------|-------|
+| Python | Pyodide (WASM) | Full Python 3 in browser |
+| JavaScript | Web Worker | Isolated execution |
+
+### Module Model
+
+```python
+class SandboxData(BaseModel):
+    language: Literal["python", "javascript"] = "python"
+    starter_code: str = ""
+    solution_code: str | None = None
+    instructions: str | None = None
+```
+
+### Components
+
+- `CodeSandbox.tsx`: Interactive code editor with execution
+- `RunnableCodeBlock.tsx`: Inline runnable code in markdown
+- `SandboxTab.tsx`: Sandbox configuration in module editor
+- `codeExecution.ts`: Pyodide/Worker execution service
