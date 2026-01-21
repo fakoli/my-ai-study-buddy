@@ -126,6 +126,12 @@ export function ModuleViewer() {
     });
   };
 
+  // Reset index when filter changes - MUST be before early returns to follow Rules of Hooks
+  useEffect(() => {
+    setCurrentFlashcardIndex(0);
+    setIsFlipped(false);
+  }, [flashcardFilter]);
+
   if (isLoading) {
     return (
       <div className="space-y-6 page-enter">
@@ -176,12 +182,6 @@ export function ModuleViewer() {
       setCurrentFlashcardIndex(currentFlashcardIndex + 1);
     }
   };
-
-  // Reset index when filter changes
-  useEffect(() => {
-    setCurrentFlashcardIndex(0);
-    setIsFlipped(false);
-  }, [flashcardFilter]);
 
   const handleQuizAnswer = (questionIndex: number, answerIndex: number) => {
     if (!quizSubmitted) {
