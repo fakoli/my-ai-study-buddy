@@ -172,6 +172,8 @@ export interface QuizWithSubmission extends Quiz {
 }
 
 // Progress types
+
+/** @deprecated Use DashboardStats instead */
 export interface ProgressStats {
   user_id: string;
   total_cards_reviewed: number;
@@ -180,6 +182,104 @@ export interface ProgressStats {
   current_streak: number;
   longest_streak: number;
   time_spent_minutes: number;
+}
+
+// New progress types for path/course/module tracking
+
+export type ModuleProgressStatusType = 'not_started' | 'in_progress' | 'completed';
+
+export interface ModuleProgressStatus {
+  module_id: string;
+  module_title: string;
+  status: ModuleProgressStatusType;
+  started_at: string | null;
+  completed_at: string | null;
+  content_read: boolean;
+  flashcards_reviewed: number;
+  flashcards_total: number;
+  quiz_score: number | null;
+  quiz_attempts: number;
+  time_spent_minutes: number;
+}
+
+export interface CourseProgressStatus {
+  course_id: string;
+  course_title: string;
+  total_modules: number;
+  completed_modules: number;
+  in_progress_modules: number;
+  completion_percentage: number;
+  average_quiz_score: number | null;
+  total_time_spent_minutes: number;
+  started_at: string | null;
+  last_activity_at: string | null;
+  modules: ModuleProgressStatus[];
+}
+
+export interface PathProgressStatus {
+  path_id: string;
+  path_title: string;
+  total_courses: number;
+  completed_courses: number;
+  in_progress_courses: number;
+  completion_percentage: number;
+  total_time_spent_minutes: number;
+  started_at: string | null;
+  last_activity_at: string | null;
+  courses: CourseProgressStatus[];
+}
+
+export interface DashboardStats {
+  user_id: string;
+  active_paths: number;
+  courses_in_progress: number;
+  courses_completed: number;
+  modules_completed_week: number;
+  modules_completed_month: number;
+  modules_completed_total: number;
+  average_quiz_score: number | null;
+  total_quizzes_taken: number;
+  total_study_time_minutes: number;
+  study_time_this_week_minutes: number;
+  current_streak: number;
+  longest_streak: number;
+  last_activity_date: string | null;
+}
+
+export type ActivityType = 'module_started' | 'module_completed' | 'quiz_submitted' | 'content_read';
+
+export interface RecentActivity {
+  id: string;
+  user_id: string;
+  activity_type: ActivityType;
+  module_id: string | null;
+  module_title: string | null;
+  course_id: string | null;
+  course_title: string | null;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface RecentActivityResponse {
+  activities: RecentActivity[];
+  total: number;
+}
+
+export type NextUpItemType = 'module' | 'course';
+
+export interface NextUpItem {
+  item_type: NextUpItemType;
+  module_id: string | null;
+  module_title: string | null;
+  course_id: string;
+  course_title: string;
+  path_id: string | null;
+  path_title: string | null;
+  reason: string;
+}
+
+export interface NextUpResponse {
+  items: NextUpItem[];
 }
 
 export interface Session {

@@ -119,10 +119,10 @@ export function ModuleEditor() {
 
   // Flashcard handlers
   const handleAddFlashcard = () => {
-    setFlashcards([...flashcards, { front: '', back: '', visual: null }]);
+    setFlashcards([...flashcards, { front: '', back: '', visual: undefined }]);
   };
 
-  const handleUpdateFlashcard = (index: number, field: keyof FlashcardData, value: string | null) => {
+  const handleUpdateFlashcard = (index: number, field: keyof FlashcardData, value: string | undefined) => {
     const updated = [...flashcards];
     updated[index] = { ...updated[index], [field]: value };
     setFlashcards(updated);
@@ -149,7 +149,7 @@ export function ModuleEditor() {
         question: '',
         options: ['', '', '', ''],
         correct_index: 0,
-        explanation: null,
+        explanation: undefined,
       },
     ]);
   };
@@ -157,7 +157,7 @@ export function ModuleEditor() {
   const handleUpdateQuestion = (
     index: number,
     field: keyof QuizQuestionData,
-    value: string | number | string[] | null
+    value: string | number | string[] | undefined
   ) => {
     const updated = [...quizQuestions];
     updated[index] = { ...updated[index], [field]: value };
@@ -816,7 +816,7 @@ export function ModuleEditor() {
                           handleUpdateQuestion(
                             qIndex,
                             'explanation',
-                            e.target.value || null
+                            e.target.value || undefined
                           )
                         }
                         placeholder="Explain why this answer is correct..."

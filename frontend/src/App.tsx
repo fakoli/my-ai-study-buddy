@@ -6,10 +6,6 @@ import { LiveRegionProvider } from './components/common/LiveRegion';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
-import { Decks } from './pages/Decks';
-import { DeckDetail } from './pages/DeckDetail';
-import { Review } from './pages/Review';
-import { Quiz } from './pages/Quiz';
 import { Settings } from './pages/Settings';
 import { LearningPaths } from './pages/LearningPaths';
 import { LearningPathDetail } from './pages/LearningPathDetail';
@@ -19,7 +15,7 @@ import { CourseEditor } from './pages/CourseEditor';
 import { ModuleViewer } from './pages/ModuleViewer';
 import { ModuleEditor } from './pages/ModuleEditor';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
-import { Home, BookOpen, Brain, Settings as SettingsIcon, LogOut, Map, Library, Shield } from 'lucide-react';
+import { Home, BookOpen, Settings as SettingsIcon, LogOut, Map, Library, Shield } from 'lucide-react';
 import clsx from 'clsx';
 import './index.css';
 
@@ -60,8 +56,6 @@ function Layout() {
     { to: '/', icon: Home, label: 'Dashboard' },
     { to: '/paths', icon: Map, label: 'Paths' },
     { to: '/courses', icon: Library, label: 'Courses' },
-    { to: '/decks', icon: BookOpen, label: 'Decks' },
-    { to: '/review', icon: Brain, label: 'Review' },
     { to: '/settings', icon: SettingsIcon, label: 'Settings' },
     ...(isAdmin ? [{ to: '/admin', icon: Shield, label: 'Admin' }] : []),
   ];
@@ -163,11 +157,6 @@ function App() {
               <Route path="/courses/:courseId/modules/new" element={<ModuleEditor />} />
               <Route path="/courses/:courseId/modules/:moduleId" element={<ModuleViewer />} />
               <Route path="/courses/:courseId/modules/:moduleId/edit" element={<ModuleEditor />} />
-              {/* Decks (existing) */}
-              <Route path="/decks" element={<Decks />} />
-              <Route path="/decks/:deckId" element={<DeckDetail />} />
-              <Route path="/review" element={<Review />} />
-              <Route path="/quiz/:deckId" element={<Quiz />} />
               <Route path="/settings" element={<Settings />} />
               {/* Admin */}
               <Route path="/admin" element={<AdminDashboard />} />
