@@ -149,6 +149,74 @@ class FlashcardRatingService:
             unhelpful=counts[FlashcardRating.UNHELPFUL.value],
         )
 
+    async def get_ratings_with_summary(
+        self,
+        user_id: str,
+        course_id: str,
+        module_id: str,
+    ) -> tuple[list[FlashcardRatingRecord], FlashcardRatingSummary]:
+        """Get both ratings and summary in a single call.
+
+        This is more efficient than calling get_user_ratings and get_rating_summary
+        separately as it shares the database queries.
+
+        Args:
+            user_id: User ID
+            course_id: Course ID
+            module_id: Module ID
+
+        Returns:
+            Tuple of (ratings_list, summary)
+        """
+        # Get module to know total flashcards
+        module = await self.storage.get("modules", module_id)
+        if not module or module.get("course_id") != course_id:
+            raise NotFoundException("Module not found", code=ErrorCode.MODULE_NOT_FOUND)
+
+        total = len(module.get("flashcards", []))
+
+        # Get user's ratings for this module (single query)
+        ratings_raw = await self.storage.list(
+            "flashcard_ratings",
+            {"user_id": user_id, "module_id": module_id},
+        )
+
+        # Build ratings list
+        ratings = [
+            FlashcardRatingRecord(
+                id=r["id"],
+                user_id=r["user_id"],
+                course_id=r["course_id"],
+                module_id=r["module_id"],
+                flashcard_index=r["flashcard_index"],
+                flashcard_id=r.get("flashcard_id"),
+                rating=FlashcardRating(r["rating"]),
+                created_at=ensure_datetime(r["created_at"]) or datetime.now(timezone.utc),
+                updated_at=ensure_datetime(r["updated_at"]) or datetime.now(timezone.utc),
+            )
+            for r in ratings_raw
+        ]
+
+        # Count by rating type
+        counts = {r.value: 0 for r in FlashcardRating}
+        for rating_raw in ratings_raw:
+            rating_value = rating_raw["rating"]
+            if rating_value in counts:
+                counts[rating_value] += 1
+
+        rated_count = len(ratings_raw)
+
+        summary = FlashcardRatingSummary(
+            total=total,
+            unrated=total - rated_count,
+            easy=counts[FlashcardRating.EASY.value],
+            medium=counts[FlashcardRating.MEDIUM.value],
+            hard=counts[FlashcardRating.HARD.value],
+            unhelpful=counts[FlashcardRating.UNHELPFUL.value],
+        )
+
+        return ratings, summary
+
     async def get_filtered_flashcards(
         self,
         user_id: str,

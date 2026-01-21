@@ -1,5 +1,6 @@
 """Course service - manages courses from both filesystem and database sources."""
 
+import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,7 @@ from models.course import (
 )
 from models.module import ModuleSummary
 from services.base_service import BaseService
+from services.cache_service import get_cache
 from storage.base import StorageBackend
 
 
@@ -50,12 +52,17 @@ class CourseService(BaseService):
         """List courses authored by a specific user."""
         db_courses = await self.storage.list("courses", {"author_id": user_id})
 
-        result = []
-        for course_data in db_courses:
-            module_count = await self.storage.count("modules", {"course_id": course_data["id"]})
-            result.append(CourseResponse(**course_data, module_count=module_count))
+        if not db_courses:
+            return []
 
-        return result
+        # Batch get module counts to avoid N+1 queries
+        course_ids = [c["id"] for c in db_courses]
+        module_counts = await self._batch_get_module_counts(course_ids)
+
+        return [
+            CourseResponse(**course_data, module_count=module_counts.get(course_data["id"], 0))
+            for course_data in db_courses
+        ]
 
     async def discover_courses(
         self, filters: CourseDiscoveryFilters
@@ -69,9 +76,15 @@ class CourseService(BaseService):
 
         # Get public database courses
         db_courses_data = await self.storage.list("courses", {"visibility": "public"})
-        for course_data in db_courses_data:
-            module_count = await self.storage.count("modules", {"course_id": course_data["id"]})
-            all_courses.append(CourseResponse(**course_data, module_count=module_count))
+
+        # Batch get module counts to avoid N+1 queries
+        if db_courses_data:
+            course_ids = [c["id"] for c in db_courses_data]
+            module_counts = await self._batch_get_module_counts(course_ids)
+
+            for course_data in db_courses_data:
+                module_count = module_counts.get(course_data["id"], 0)
+                all_courses.append(CourseResponse(**course_data, module_count=module_count))
 
         # Apply filters
         filtered = self._apply_discovery_filters(all_courses, filters)
@@ -169,6 +182,10 @@ class CourseService(BaseService):
         )
 
         await self.storage.create("courses", course.model_dump(mode="json"))
+
+        # Invalidate user's course list cache
+        self._invalidate_user_courses_cache(user_id)
+
         return course
 
     async def update_course(
@@ -189,6 +206,9 @@ class CourseService(BaseService):
                 code=ErrorCode.COURSE_NOT_FOUND,
             )
 
+        # Invalidate cache
+        self._invalidate_course_cache(course_id)
+
         return Course(**updated_data)
 
     async def delete_course(self, course_id: str, user_id: str) -> bool:
@@ -202,7 +222,13 @@ class CourseService(BaseService):
             await self.storage.delete("modules", module["id"])
 
         # Delete the course
-        return await self.storage.delete("courses", course_id)
+        result = await self.storage.delete("courses", course_id)
+
+        # Invalidate cache
+        self._invalidate_course_cache(course_id)
+        self._invalidate_user_courses_cache(user_id)
+
+        return result
 
     async def increment_times_added(self, course_id: str) -> None:
         """Increment the times_added counter for a course."""
@@ -223,6 +249,86 @@ class CourseService(BaseService):
             )
 
     # Private helper methods
+
+    async def _batch_get_module_counts(self, course_ids: list[str]) -> dict[str, int]:
+        """Get module counts for multiple courses in parallel.
+
+        Uses caching and parallel execution to reduce N+1 queries.
+
+        Args:
+            course_ids: List of course IDs to get counts for
+
+        Returns:
+            Dict mapping course_id to module count
+        """
+        if not course_ids:
+            return {}
+
+        cache = get_cache()
+        results: dict[str, int] = {}
+        uncached_ids: list[str] = []
+
+        # Check cache first
+        for course_id in course_ids:
+            cache_key = f"modules:count:{course_id}"
+            value, found = cache.get(cache_key)
+            if found:
+                results[course_id] = value
+            else:
+                uncached_ids.append(course_id)
+
+        # Fetch uncached counts in parallel
+        if uncached_ids:
+            tasks = [
+                self.storage.count("modules", {"course_id": cid})
+                for cid in uncached_ids
+            ]
+            counts = await asyncio.gather(*tasks)
+
+            # Cache and store results
+            for course_id, count in zip(uncached_ids, counts):
+                cache_key = f"modules:count:{course_id}"
+                cache.set(cache_key, count, ttl_seconds=60)
+                results[course_id] = count
+
+        return results
+
+    async def _get_cached_course(self, course_id: str) -> dict | None:
+        """Get a course from cache or database.
+
+        Args:
+            course_id: The course ID
+
+        Returns:
+            Course data dict or None if not found
+        """
+        cache = get_cache()
+        cache_key = f"course:{course_id}"
+
+        return await cache.get_or_compute(
+            key=cache_key,
+            compute_fn=lambda: self.storage.get("courses", course_id),
+            ttl_seconds=300,
+        )
+
+    def _invalidate_course_cache(self, course_id: str) -> None:
+        """Invalidate cache entries for a course.
+
+        Args:
+            course_id: The course ID to invalidate
+        """
+        cache = get_cache()
+        cache.invalidate(f"course:{course_id}")
+        cache.invalidate(f"modules:count:{course_id}")
+
+    def _invalidate_user_courses_cache(self, user_id: str) -> None:
+        """Invalidate the user's course list cache.
+
+        Args:
+            user_id: The user ID
+        """
+        cache = get_cache()
+        cache.invalidate_pattern(f"user:courses:{user_id}")
 
     async def _get_editable_course(self, course_id: str, user_id: str) -> dict:
         """Get a course and verify it's editable by the user."""
@@ -329,28 +435,33 @@ class CourseService(BaseService):
 
     async def _get_database_courses(self, user_id: str | None) -> list[CourseResponse]:
         """Get database courses accessible to user."""
-        courses = []
+        courses_data: list[dict] = []
+        user_course_ids: set[str] = set()
 
         # Get user's own courses
         if user_id:
             user_courses = await self.storage.list("courses", {"author_id": user_id})
             for course_data in user_courses:
-                module_count = await self.storage.count(
-                    "modules", {"course_id": course_data["id"]}
-                )
-                courses.append(CourseResponse(**course_data, module_count=module_count))
+                courses_data.append(course_data)
+                user_course_ids.add(course_data["id"])
 
         # Get public courses not owned by user
         public_courses = await self.storage.list("courses", {"visibility": "public"})
         for course_data in public_courses:
-            if user_id and course_data.get("author_id") == user_id:
-                continue  # Already included above
-            module_count = await self.storage.count(
-                "modules", {"course_id": course_data["id"]}
-            )
-            courses.append(CourseResponse(**course_data, module_count=module_count))
+            if course_data["id"] not in user_course_ids:
+                courses_data.append(course_data)
 
-        return courses
+        if not courses_data:
+            return []
+
+        # Batch get module counts to avoid N+1 queries
+        course_ids = [c["id"] for c in courses_data]
+        module_counts = await self._batch_get_module_counts(course_ids)
+
+        return [
+            CourseResponse(**course_data, module_count=module_counts.get(course_data["id"], 0))
+            for course_data in courses_data
+        ]
 
     async def _get_filesystem_modules(self, course_id: str) -> list[ModuleSummary]:
         """Get module summaries from filesystem."""

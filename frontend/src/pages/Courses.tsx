@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, Filter, Plus } from 'lucide-react';
+import { Search, Plus, Loader2 } from 'lucide-react';
 import { CourseList } from '../components/courses/CourseList';
 import { CourseCard } from '../components/courses/CourseCard';
 import { Modal } from '../components/common/Modal';
@@ -10,6 +10,7 @@ import { SkeletonDeckGrid } from '../components/common/Skeleton';
 import { useMyCourses, useDiscoverCourses } from '../hooks/useCourses';
 import { useMyLearningPaths, useAddCourseToPath } from '../hooks/useLearningPaths';
 import { useToast } from '../hooks/useToast';
+import { useDebouncedValue } from '../hooks/useDebouncedSearch';
 import type { CourseDifficulty, CourseDiscoveryFilters } from '../types';
 
 type Tab = 'mine' | 'discover';
@@ -29,13 +30,17 @@ export function Courses() {
   const [difficultyFilter, setDifficultyFilter] = useState<CourseDifficulty | ''>('');
   const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'alphabetical'>('popular');
 
+  // Debounce search query to reduce API calls while typing
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+  const isSearchDebouncing = searchQuery !== debouncedSearchQuery;
+
   // Add to path modal
   const [addToPathModalOpen, setAddToPathModalOpen] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
-  // Build discovery filters
+  // Build discovery filters using debounced search query
   const filters: CourseDiscoveryFilters = {
-    q: searchQuery || undefined,
+    q: debouncedSearchQuery || undefined,
     difficulty: difficultyFilter || undefined,
     sort: sortBy,
   };
@@ -122,8 +127,11 @@ export function Courses() {
                   placeholder="Search courses..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
+                {isSearchDebouncing && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+                )}
               </div>
               <div className="flex gap-2">
                 <select

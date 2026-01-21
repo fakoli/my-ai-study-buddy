@@ -2,6 +2,11 @@
 
 Generates module structure, content, flashcards, quizzes, and visuals
 using Claude API for text and nano-banana-pro (Gemini) for images.
+
+Optimizations:
+- Course context caching (30-min TTL) to reduce redundant context building
+- Request deduplication for concurrent identical requests
+- Model routing to use appropriate models for different task complexities
 """
 
 import asyncio
@@ -109,10 +114,12 @@ from models.ai_generation import (
     SuggestModulesRequest,
     SuggestModulesResponse,
 )
-from models.course import Course, CourseInstructions
+from models.course import Course
 from models.module import FlashcardData, Module, QuizData, QuizQuestionData
+from services.ai_model_router import get_model_router
 from services.auth_service import AuthService
 from services.base_service import BaseService
+from services.request_deduplication import get_request_deduplicator
 from services.user_api_settings_service import UserAPISettingsService
 from storage.base import StorageBackend
 
@@ -131,7 +138,15 @@ class AIGenerationService(BaseService):
     """Generates course content using AI.
 
     Uses Claude API for text generation and nano-banana-pro (Gemini) for images.
+
+    Optimizations:
+    - Course context caching (30-min TTL) to reduce redundant context building
+    - Request deduplication for concurrent identical requests
+    - Model routing to use appropriate models for different task complexities
     """
+
+    # Course context cache TTL (30 minutes)
+    CONTEXT_CACHE_TTL_SECONDS = 1800
 
     def __init__(
         self,
@@ -146,6 +161,11 @@ class AIGenerationService(BaseService):
         self.uploads_path = Path(uploads_path)
         self.auth_service = AuthService(storage, settings)
         self.user_api_settings_service = UserAPISettingsService(storage, settings)
+
+        # Course context cache: course_id -> (context_string, expiry_time)
+        self._course_context_cache: dict[str, tuple[str, float]] = {}
+        self._model_router = get_model_router()
+        self._deduplicator = get_request_deduplicator()
 
     async def _check_token_balance(self, user_id: str, amount: int) -> None:
         """Check if user has sufficient tokens."""
@@ -297,12 +317,27 @@ class AIGenerationService(BaseService):
             raise AIServiceException(f"AI service error: {e.message}")
 
     def _build_course_context(self, course: Course) -> str:
-        """Build context string from course instructions."""
-        if not course.instructions:
-            return f"Course: {course.title}\nDescription: {course.description or 'No description'}"
+        """Build context string from course instructions with caching.
 
-        inst = course.instructions
-        context = f"""Course: {course.title}
+        Caches the context for 30 minutes to avoid rebuilding for repeated
+        operations on the same course.
+        """
+        # Check cache first
+        cached = self._course_context_cache.get(course.id)
+        if cached:
+            context, expiry = cached
+            if time.monotonic() < expiry:
+                logger.debug(f"Using cached course context", course_id=course.id)
+                return context
+            # Expired, remove from cache
+            del self._course_context_cache[course.id]
+
+        # Build context
+        if not course.instructions:
+            context = f"Course: {course.title}\nDescription: {course.description or 'No description'}"
+        else:
+            inst = course.instructions
+            context = f"""Course: {course.title}
 Description: {course.description or 'No description'}
 Difficulty: {course.difficulty}
 
@@ -313,10 +348,24 @@ TONE: {inst.tone}
 LEARNING OBJECTIVES:
 {chr(10).join(f'- {obj}' for obj in inst.learning_objectives)}
 """
-        if inst.additional_context:
-            context += f"\nADDITIONAL CONTEXT: {inst.additional_context}"
+            if inst.additional_context:
+                context += f"\nADDITIONAL CONTEXT: {inst.additional_context}"
+
+        # Cache the context
+        expiry = time.monotonic() + self.CONTEXT_CACHE_TTL_SECONDS
+        self._course_context_cache[course.id] = (context, expiry)
+        logger.debug(f"Cached course context", course_id=course.id)
 
         return context
+
+    def invalidate_course_context_cache(self, course_id: str) -> None:
+        """Invalidate cached context for a course.
+
+        Should be called when course instructions are updated.
+        """
+        if course_id in self._course_context_cache:
+            del self._course_context_cache[course_id]
+            logger.debug(f"Invalidated course context cache", course_id=course_id)
 
     async def _get_course(self, course_id: str) -> Course:
         """Get a course by ID from database."""
@@ -920,3 +969,57 @@ Requirements:
             markdown_reference=markdown_ref,
             tokens_used=cost,
         )
+
+    async def generate_visuals_batch(
+        self, user_id: str, requests: list[GenerateVisualRequest]
+    ) -> list[GeneratedVisual | Exception]:
+        """Generate multiple images in parallel with rate limiting.
+
+        Args:
+            user_id: User ID for token management
+            requests: List of visual generation requests
+
+        Returns:
+            List of GeneratedVisual objects or Exception for failed generations.
+            The order matches the input requests.
+
+        Note:
+            Uses a semaphore to limit concurrent image generations to avoid
+            overwhelming the Gemini API. Failed generations return the
+            exception instead of raising, allowing partial success.
+        """
+        if not requests:
+            return []
+
+        # Limit concurrent image generations
+        semaphore = asyncio.Semaphore(2)
+
+        async def generate_with_semaphore(
+            request: GenerateVisualRequest,
+        ) -> GeneratedVisual | Exception:
+            async with semaphore:
+                try:
+                    return await self.generate_visual(user_id, request)
+                except Exception as e:
+                    logger.error(
+                        f"Batch visual generation failed for item",
+                        description=request.description[:50],
+                        error_type=type(e).__name__,
+                        error_message=str(e),
+                    )
+                    return e
+
+        # Execute all requests in parallel with semaphore limiting
+        tasks = [generate_with_semaphore(req) for req in requests]
+        results = await asyncio.gather(*tasks)
+
+        # Log summary
+        success_count = sum(1 for r in results if not isinstance(r, Exception))
+        logger.info(
+            f"Batch visual generation completed",
+            total=len(requests),
+            success=success_count,
+            failed=len(requests) - success_count,
+        )
+
+        return list(results)

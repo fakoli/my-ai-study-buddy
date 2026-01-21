@@ -10,6 +10,7 @@ from models.flashcard_rating import (
     FlashcardRatingResponse,
     FlashcardRatingSummary,
     RateFlashcardRequest,
+    RatingsWithSummaryResponse,
     UnhelpfulCardsResponse,
 )
 from services.flashcard_rating_service import FlashcardRatingService
@@ -66,6 +67,26 @@ async def get_rating_summary(
         course_id=course_id,
         module_id=module_id,
     )
+
+
+@router.get("/ratings-with-summary", response_model=RatingsWithSummaryResponse)
+async def get_ratings_with_summary(
+    course_id: str,
+    module_id: str,
+    current_user: CurrentUser,
+    service: FlashcardRatingService = Depends(get_flashcard_rating_service),
+) -> RatingsWithSummaryResponse:
+    """Get both ratings and summary in one call.
+
+    This combined endpoint reduces two API calls to one for the common case
+    of loading module flashcard state in the UI.
+    """
+    ratings, summary = await service.get_ratings_with_summary(
+        user_id=current_user.id,
+        course_id=course_id,
+        module_id=module_id,
+    )
+    return RatingsWithSummaryResponse(ratings=ratings, summary=summary)
 
 
 @router.get("/filter", response_model=FilteredFlashcardsResponse)

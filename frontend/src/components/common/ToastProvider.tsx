@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Toast, ToastVariant } from './Toast';
 
 interface ToastItem {
@@ -23,6 +24,16 @@ interface ToastProviderProps {
 
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const location = useLocation();
+
+  // Clear toasts on navigation to prevent stale messages
+  // Only update state if there are actually toasts to clear
+  useEffect(() => {
+    if (toasts.length > 0) {
+      setToasts([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally only run on pathname change
+  }, [location.pathname]);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
