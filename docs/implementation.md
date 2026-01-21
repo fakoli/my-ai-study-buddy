@@ -67,58 +67,75 @@ ANTHROPIC_API_KEY=your-key
 /backend
   main.py                 # FastAPI app initialization
   config.py               # Settings and environment loading
-  dependencies.py         # Dependency injection
-  
+  dependencies.py         # Dependency injection, type aliases
+  exceptions.py           # Error codes and exceptions
+
   /api
     __init__.py
-    /routes
-      decks.py
-      reviews.py
-      quiz.py
-      progress.py
-      references.py
-      ai.py
-      auth.py
-      notifications.py
-  
-  /models
+    /routes               # 13 route files
+      auth.py             # Authentication
+      references.py       # Reference materials
+      ai.py               # AI assistance endpoints
+      notifications.py    # Notification preferences
+      courses.py          # Course management
+      learning_paths.py   # Learning paths
+      uploads.py          # Image uploads
+      user_settings.py    # API key management
+      admin.py            # Admin console
+      modules.py          # Module management
+      progress.py         # Progress tracking
+      flashcard_ratings.py # Flashcard difficulty ratings
+      generation.py       # AI content generation
+
+  /models                 # 11 model files
     __init__.py
-    user.py
-    deck.py
-    card.py
-    review.py
-    quiz.py
-    progress.py
-    notification.py
-  
-  /services
+    user.py               # User + UserRole
+    quiz.py               # Quiz types (module-embedded)
+    notification.py       # Notification preferences
+    learning_path.py      # Learning paths
+    course.py             # Course + CourseInstructions
+    user_api_settings.py  # API key settings
+    token_transaction.py  # Token history
+    progress.py           # Progress tracking models
+    module.py             # Module + FlashcardData + QuizData + SandboxData
+    ai_generation.py      # AI generation request/response
+    flashcard_rating.py   # Rating models
+
+  /services               # 20 service files
     __init__.py
-    deck_service.py
-    quiz_service.py
-    review_service.py
-    progress_service.py
-    ai_service.py
-    /notifications
-      __init__.py
-      email_service.py
-      sms_service.py
-      scheduler.py
-      /templates
-        reminder.html
-        progress_summary.html
-  
+    base_service.py       # Base service class
+    auth_service.py       # Authentication
+    reference_service.py  # Reference materials
+    notification_service.py # Notifications
+    ai_service.py         # AI assistance
+    learning_path_service.py # Learning paths
+    image_service.py      # Image handling
+    encryption_service.py # API key encryption
+    user_api_settings_service.py # User API settings
+    admin_service.py      # Admin operations
+    module_service.py     # Module operations
+    progress_service.py   # Progress tracking
+    course_service.py     # Course operations
+    flashcard_rating_service.py # Flashcard ratings
+    ai_generation_service.py # AI content generation
+    ai_model_router.py    # Cost-optimized model selection
+    cache_service.py      # In-memory TTL caching
+    course_orchestrator.py # Multi-phase course generation
+    parallel_generation_service.py # Concurrent AI generation
+    request_deduplication.py # Duplicate request prevention
+
   /storage
     __init__.py
     base.py               # StorageBackend ABC
-    json_storage.py
-    sqlite_storage.py
-    supabase_storage.py
-  
+    json_storage.py       # Development storage
+
   /tests
     conftest.py
-    test_decks.py
-    test_quiz.py
-    test_reviews.py
+    test_auth.py
+    test_courses.py
+    test_modules.py
+    test_progress.py
+    test_flashcard_ratings.py
 ```
 
 ### Frontend
@@ -128,47 +145,126 @@ ANTHROPIC_API_KEY=your-key
   /src
     main.tsx
     App.tsx
-    
-    /api
-      client.ts           # Axios/fetch wrapper
-      decks.ts
-      quiz.ts
-      auth.ts
-      notifications.ts
-    
+
+    /api                  # 14 API client files
+      client.ts           # Fetch wrapper with auth
+      auth.ts             # Authentication
+      ai.ts               # AI assistance
+      notifications.ts    # Notifications
+      references.ts       # Reference materials
+      courses.ts          # Course management
+      learningPaths.ts    # Learning paths
+      uploads.ts          # Image uploads
+      generation.ts       # AI content generation
+      userSettings.ts     # API key management
+      admin.ts            # Admin operations
+      modules.ts          # Module operations
+      progress.ts         # Progress tracking
+      flashcardRatings.ts # Flashcard ratings
+
     /components
-      /common
+      /common             # 15 shared components
+        AuthProvider.tsx
         Button.tsx
         Card.tsx
+        ConfirmModal.tsx
+        EmptyState.tsx
+        ErrorBoundary.tsx
+        Input.tsx
+        LiveRegion.tsx
+        MarkdownRenderer.tsx
         Modal.tsx
-      /flashcards
-        FlashCard.tsx
-        DeckList.tsx
-        ReviewSession.tsx
-      /quiz
-        QuizQuestion.tsx
-        QuizResults.tsx
-      /dashboard
-        ProgressChart.tsx
-        StreakDisplay.tsx
+        Pagination.tsx
+        RunnableCodeBlock.tsx
+        Skeleton.tsx
+        Textarea.tsx
+        Toast.tsx
+        ToastProvider.tsx
+      /dashboard          # 5 dashboard components
         ActionCard.tsx
-    
-    /pages
+        NextUpPanel.tsx
+        RecentActivityFeed.tsx
+        StatsGrid.tsx
+        StreakDisplay.tsx
+      /course-editor      # 5 course editor components
+        CourseInfoStep.tsx
+        CourseInstructionsStep.tsx
+        CourseModulesStep.tsx
+        CourseStepper.tsx
+        ModuleSuggestionModal.tsx
+      /courses            # 4 course listing components
+        CourseCard.tsx
+        CourseList.tsx
+        PathCard.tsx
+        PathList.tsx
+      /module-editor      # 10 module editor components
+        AIPromptPanel.tsx
+        CodeSandbox.tsx
+        ContentTab.tsx
+        FlashcardItem.tsx
+        FlashcardsTab.tsx
+        MarkdownToolbar.tsx
+        ModuleEditorTabs.tsx
+        QuizQuestionItem.tsx
+        QuizTab.tsx
+        SandboxTab.tsx
+      /flashcards         # 2 flashcard components
+        FlashcardFilter.tsx
+        RatingButtons.tsx
+      /admin              # 3 admin components
+        AdminStatsGrid.tsx
+        TokenAdjustmentModal.tsx
+        UserTable.tsx
+
+    /pages                # 12 page components
       Dashboard.tsx
-      Decks.tsx
-      Quiz.tsx
-      References.tsx
+      Courses.tsx
+      CourseDetail.tsx
+      CourseEditor.tsx
+      LearningPaths.tsx
+      LearningPathDetail.tsx
+      ModuleEditor.tsx
+      ModuleViewer.tsx
       Settings.tsx
-    
-    /hooks
-      useDecks.ts
-      useQuiz.ts
-      useProgress.ts
+      Login.tsx
+      Register.tsx
+      /admin
+        AdminDashboard.tsx
+
+    /hooks                # 26 custom hooks
+      useAuth.ts
+      useAdmin.ts
+      useCourses.ts
+      useCourseEditorForm.ts
+      useCourseSteps.ts
+      useDebouncedSearch.ts
+      useFlashcardEditor.ts
+      useFlashcardRatings.ts
+      useFormValidation.ts
+      useGeneration.ts
+      useLearningPaths.ts
+      useLiveRegion.ts
+      useMarkdownEditor.ts
+      useModuleEditorForm.ts
+      useModuleGeneration.ts
+      useModuleOutlines.ts
+      useModules.ts
+      useModuleSuggestions.ts
+      useModuleViewerState.ts
       useNotifications.ts
-    
+      useProgress.ts
+      useQuizEditor.ts
+      useToast.ts
+      useTokenAdjustment.ts
+      useUserSearch.ts
+      useUserSettings.ts
+
+    /services             # Code execution services
+      codeExecution.ts    # Pyodide/Worker code execution
+
     /types
       index.ts
-    
+
     /utils
       date.ts
       formatting.ts
@@ -186,20 +282,20 @@ Keep thin. Validate input, call service, return response.
 
 ```python
 # Good
-@router.post("/decks", response_model=DeckResponse)
-async def create_deck(
-    deck: DeckCreate,
-    user: User = Depends(get_current_user),
-    deck_service: DeckService = Depends(get_deck_service)
-) -> DeckResponse:
-    return await deck_service.create(user.id, deck)
+@router.post("/courses", response_model=CourseResponse)
+async def create_course(
+    course: CourseCreate,
+    user: CurrentUser,
+    course_service: CourseService = Depends(get_course_service)
+) -> CourseResponse:
+    return await course_service.create(user.id, course)
 
 # Bad - logic in handler
-@router.post("/decks")
-async def create_deck(deck: DeckCreate, user: User = Depends(get_current_user)):
-    deck_id = str(uuid4())
+@router.post("/courses")
+async def create_course(course: CourseCreate, user: CurrentUser):
+    course_id = str(uuid4())
     now = datetime.utcnow()
-    data = {"id": deck_id, "user_id": user.id, "created_at": now, **deck.dict()}
+    data = {"id": course_id, "author_id": user.id, "created_at": now, **course.dict()}
     # ... more logic
 ```
 
@@ -208,29 +304,29 @@ async def create_deck(deck: DeckCreate, user: User = Depends(get_current_user)):
 Business logic lives here.
 
 ```python
-class DeckService:
+class ModuleService:
     def __init__(self, storage: StorageBackend):
         self.storage = storage
-    
-    async def create(self, user_id: str, deck: DeckCreate) -> Deck:
+
+    async def create(self, course_id: str, module: ModuleCreate) -> Module:
         data = {
             "id": str(uuid4()),
-            "user_id": user_id,
-            "title": deck.title,
-            "description": deck.description,
+            "course_id": course_id,
+            "title": module.title,
+            "order_index": module.order_index,
+            "content_markdown": module.content_markdown,
+            "flashcards": [f.model_dump() for f in module.flashcards],
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
-        result = await self.storage.create("decks", data)
-        return Deck(**result)
-    
-    async def get_with_cards(self, deck_id: str, user_id: str) -> DeckWithCards:
-        deck = await self.storage.get("decks", deck_id)
-        if not deck or deck["user_id"] != user_id:
-            raise NotFoundException("Deck not found")
-        
-        cards = await self.storage.list("cards", {"deck_id": deck_id})
-        return DeckWithCards(**deck, cards=[Card(**c) for c in cards])
+        result = await self.storage.create("modules", data)
+        return Module(**result)
+
+    async def get_by_id(self, module_id: str, course_id: str) -> Module:
+        module = await self.storage.get("modules", module_id)
+        if not module or module["course_id"] != course_id:
+            raise NotFoundException("Module not found")
+        return Module(**module)
 ```
 
 #### Type Hints
@@ -239,15 +335,16 @@ Always use them.
 
 ```python
 # Good
-async def calculate_next_review(
-    card_id: str,
-    difficulty: Difficulty,
-    current_interval: int
-) -> datetime:
+async def rate_flashcard(
+    user_id: str,
+    module_id: str,
+    flashcard_index: int,
+    rating: FlashcardRating
+) -> FlashcardRatingRecord:
     ...
 
 # Bad
-async def calculate_next_review(card_id, difficulty, current_interval):
+async def rate_flashcard(user_id, module_id, flashcard_index, rating):
     ...
 ```
 
@@ -279,25 +376,27 @@ Functional, focused, typed.
 
 ```typescript
 // Good
-interface FlashCardProps {
-  card: Card;
-  onFlip: () => void;
-  onDifficulty: (difficulty: Difficulty) => void;
-  isFlipped: boolean;
+interface FlashcardItemProps {
+  flashcard: FlashcardData;
+  index: number;
+  rating: FlashcardRating | null;
+  onRate: (rating: FlashcardRating) => void;
 }
 
-export function FlashCard({ card, onFlip, onDifficulty, isFlipped }: FlashCardProps) {
+export function FlashcardItem({ flashcard, index, rating, onRate }: FlashcardItemProps) {
+  const [isFlipped, setIsFlipped] = useState(false);
+
   return (
-    <div className="flash-card" onClick={onFlip}>
+    <div className="flashcard-item" onClick={() => setIsFlipped(!isFlipped)}>
       {isFlipped ? (
         <div className="back">
-          <p>{card.back}</p>
-          {card.visualUrl && <img src={card.visualUrl} alt="" />}
-          <DifficultyButtons onSelect={onDifficulty} />
+          <p>{flashcard.back}</p>
+          {flashcard.visual && <img src={flashcard.visual} alt="" />}
+          <RatingButtons currentRating={rating} onRate={onRate} />
         </div>
       ) : (
         <div className="front">
-          <p>{card.front}</p>
+          <p>{flashcard.front}</p>
         </div>
       )}
     </div>
@@ -310,38 +409,40 @@ export function FlashCard({ card, onFlip, onDifficulty, isFlipped }: FlashCardPr
 Encapsulate data fetching and state.
 
 ```typescript
-export function useQuiz(quizId: string) {
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
+export function useFlashcardRatings(courseId: string, moduleId: string) {
+  const [ratings, setRatings] = useState<FlashcardRatingRecord[]>([]);
+  const [summary, setSummary] = useState<FlashcardRatingSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<number[]>([]);
 
   useEffect(() => {
-    fetchQuiz(quizId)
-      .then(setQuiz)
+    fetchRatingsWithSummary(courseId, moduleId)
+      .then(({ ratings, summary }) => {
+        setRatings(ratings);
+        setSummary(summary);
+      })
       .catch(setError)
       .finally(() => setLoading(false));
-  }, [quizId]);
+  }, [courseId, moduleId]);
 
-  const submitAnswer = (answerIndex: number) => {
-    setAnswers([...answers, answerIndex]);
-    setCurrentIndex(currentIndex + 1);
-  };
-
-  const submit = async () => {
-    if (!quiz) return null;
-    return await submitQuiz(quiz.id, answers);
+  const rateFlashcard = async (index: number, rating: FlashcardRating) => {
+    const result = await submitRating(courseId, moduleId, index, rating);
+    setRatings(prev => {
+      const existing = prev.findIndex(r => r.flashcard_index === index);
+      if (existing >= 0) {
+        return [...prev.slice(0, existing), result, ...prev.slice(existing + 1)];
+      }
+      return [...prev, result];
+    });
   };
 
   return {
-    quiz,
+    ratings,
+    summary,
     loading,
     error,
-    currentQuestion: quiz?.questions[currentIndex],
-    isComplete: quiz ? currentIndex >= quiz.questions.length : false,
-    submitAnswer,
-    submit,
+    rateFlashcard,
+    getRating: (index: number) => ratings.find(r => r.flashcard_index === index)?.rating,
   };
 }
 ```
@@ -356,7 +457,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('token');
-  
+
   const response = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -376,11 +477,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, data: unknown) => 
+  post: <T>(path: string, data: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(data) }),
-  put: <T>(path: string, data: unknown) => 
+  put: <T>(path: string, data: unknown) =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: <T>(path: string) => 
+  delete: <T>(path: string) =>
     request<T>(path, { method: 'DELETE' }),
 };
 ```
@@ -424,10 +525,10 @@ export const api = {
 uv run pytest backend/tests/ -v
 
 # Single file
-uv run pytest backend/tests/test_decks.py -v
+uv run pytest backend/tests/test_modules.py -v
 
 # Single test
-uv run pytest backend/tests/test_decks.py::test_create_deck -v
+uv run pytest backend/tests/test_modules.py::test_create_module -v
 
 # With coverage
 uv run pytest backend/tests/ --cov=backend --cov-report=html
@@ -436,7 +537,7 @@ uv run pytest backend/tests/ --cov=backend --cov-report=html
 Test structure:
 
 ```python
-# test_decks.py
+# test_modules.py
 import pytest
 from httpx import AsyncClient
 
@@ -450,15 +551,15 @@ async def auth_headers(client):
     # Create test user and return auth headers
     ...
 
-async def test_create_deck(client, auth_headers):
+async def test_create_module(client, auth_headers, test_course):
     response = await client.post(
-        "/api/v1/decks",
-        json={"title": "Test Deck", "description": "A test"},
+        f"/api/v1/courses/{test_course.id}/modules",
+        json={"title": "Test Module", "order_index": 0, "content_markdown": "# Hello"},
         headers=auth_headers
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["title"] == "Test Deck"
+    assert data["title"] == "Test Module"
 ```
 
 ### Frontend
@@ -550,12 +651,12 @@ services:
 4. Add send method in appropriate service (email or SMS)
 5. Schedule in `scheduler.py` if time-based
 
-### Implement spaced repetition adjustment
+### Add flashcard rating functionality to a module
 
-1. Review current algorithm in `services/review_service.py`
-2. Modify `calculate_next_review()` based on difficulty
-3. Update tests to verify intervals
-4. Consider adding user-configurable parameters
+1. Use `FlashcardRatingService` to track user ratings
+2. Ratings: easy, medium, hard, unhelpful
+3. Use `/flashcards/filter` endpoint to filter by difficulty
+4. Author feedback via `/feedback/unhelpful-cards` endpoint
 
 ### Add visual to reference material
 

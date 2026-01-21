@@ -19,42 +19,31 @@
 
 Base URL: `/api/v1`
 
-### Decks - Flashcard Management
+### Progress - Learning Progress Tracking
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/decks` | List all decks |
-| POST | `/decks` | Create new deck |
-| GET | `/decks/{deck_id}` | Get deck with cards |
-| PUT | `/decks/{deck_id}` | Update deck metadata |
-| DELETE | `/decks/{deck_id}` | Delete deck |
-| POST | `/decks/{deck_id}/cards` | Add card to deck |
-| PUT | `/decks/{deck_id}/cards/{card_id}` | Update card |
-| DELETE | `/decks/{deck_id}/cards/{card_id}` | Remove card |
+| GET | `/progress/dashboard` | Dashboard statistics |
+| POST | `/progress/modules/{course_id}/{module_id}` | Record module progress |
+| GET | `/progress/modules/{course_id}/{module_id}` | Get module progress |
+| GET | `/progress/courses/{course_id}` | Course progress status |
+| GET | `/progress/paths/{path_id}` | Learning path progress |
+| GET | `/progress/activity` | Recent activity feed |
+| GET | `/progress/next-up` | Recommended next items |
+| GET | `/progress/stats` | Overall stats (deprecated) |
+| GET | `/progress/sessions` | Session history (deprecated) |
+| GET | `/progress/topics` | Per-topic mastery (deprecated) |
 
-### Reviews - Spaced Repetition
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/reviews` | Submit review (card_id, difficulty) |
-| GET | `/reviews/due` | Get cards due for review |
-| GET | `/reviews/history` | Review history for analytics |
-
-### Quiz - Generation and Submission
+### Flashcard Ratings - Study Difficulty Tracking
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/quiz/generate` | Generate quiz |
-| POST | `/quiz/submit` | Submit answers, get scored results |
-| GET | `/quiz/{quiz_id}` | Retrieve quiz and results |
-
-### Progress - Stats and History
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/progress/stats` | Overall stats |
-| GET | `/progress/sessions` | Session history |
-| GET | `/progress/topics` | Per-topic mastery |
+| POST | `/courses/{course_id}/modules/{module_id}/flashcards/rate` | Rate a flashcard |
+| GET | `/courses/{course_id}/modules/{module_id}/flashcards/ratings` | Get user's ratings |
+| GET | `/courses/{course_id}/modules/{module_id}/flashcards/summary` | Rating summary |
+| GET | `/courses/{course_id}/modules/{module_id}/flashcards/ratings-with-summary` | Ratings + summary |
+| GET | `/courses/{course_id}/modules/{module_id}/flashcards/filter` | Filter by rating |
+| GET | `/courses/{course_id}/feedback/unhelpful-cards` | Author feedback |
 
 ### References - Study Material
 
@@ -141,6 +130,7 @@ Base URL: `/api/v1`
 | POST | `/generate/flashcards` | Generate flashcards (8 tokens) |
 | POST | `/generate/quiz` | Generate quiz (10 tokens) |
 | POST | `/generate/visual` | Generate educational image (5 tokens) |
+| POST | `/generate/full-course` | Generate entire course with orchestration (variable) |
 
 ### Admin - User Management (Admin only)
 
@@ -188,94 +178,145 @@ class User(BaseModel):
     role: UserRole = UserRole.USER
 ```
 
-### Deck and Card
-
-```python
-class Deck(BaseModel):
-    id: str
-    user_id: str
-    title: str
-    description: str | None = None
-    created_at: datetime
-    updated_at: datetime
-
-class Card(BaseModel):
-    id: str
-    deck_id: str
-    front: str
-    back: str
-    visual_url: str | None = None
-    created_at: datetime
-```
-
-### Review
-
-```python
-class Difficulty(str, Enum):
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
-
-class Review(BaseModel):
-    id: str
-    user_id: str
-    card_id: str
-    difficulty: Difficulty
-    reviewed_at: datetime
-    next_review_at: datetime
-```
-
-### Quiz
-
-```python
-class QuizQuestion(BaseModel):
-    id: str
-    question: str
-    options: list[str]
-    correct_index: int
-    explanation: str | None = None
-
-class Quiz(BaseModel):
-    id: str
-    user_id: str
-    deck_id: str | None = None
-    topic: str | None = None
-    questions: list[QuizQuestion]
-    created_at: datetime
-
-class QuizSubmission(BaseModel):
-    quiz_id: str
-    answers: list[int]
-    submitted_at: datetime
-    score: float
-    results: list[QuestionResult]
-
-class QuestionResult(BaseModel):
-    question_id: str
-    selected: int
-    correct: int
-    is_correct: bool
-```
-
 ### Progress
 
 ```python
-class ProgressStats(BaseModel):
-    user_id: str
-    total_cards_reviewed: int
-    total_quizzes_completed: int
-    accuracy_rate: float
-    current_streak: int
-    longest_streak: int
-    time_spent_minutes: int
+class ModuleProgressStatus(BaseModel):
+    """Progress status for a single module."""
+    module_id: str
+    module_title: str
+    status: Literal["not_started", "in_progress", "completed"] = "not_started"
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    content_read: bool = False
+    flashcards_reviewed: int = 0
+    flashcards_total: int = 0
+    quiz_score: float | None = None
+    quiz_attempts: int = 0
+    time_spent_minutes: int = 0
 
-class Session(BaseModel):
+class ModuleProgress(BaseModel):
+    """User's progress on a specific module."""
     id: str
     user_id: str
-    started_at: datetime
-    ended_at: datetime | None
-    activity_type: Literal["review", "quiz", "reference"]
-    items_completed: int
+    module_id: str
+    course_id: str
+    status: Literal["not_started", "in_progress", "completed"] = "not_started"
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    content_read: bool = False
+    flashcards_reviewed: int = 0
+    quiz_score: float | None = None
+    quiz_attempts: int = 0
+    time_spent_minutes: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+class CourseProgressStatus(BaseModel):
+    """Progress status for a course."""
+    course_id: str
+    course_title: str
+    total_modules: int = 0
+    completed_modules: int = 0
+    in_progress_modules: int = 0
+    completion_percentage: float = 0.0
+    average_quiz_score: float | None = None
+    total_time_spent_minutes: int = 0
+    modules: list[ModuleProgressStatus] = []
+
+class PathProgressStatus(BaseModel):
+    """Progress status for a learning path."""
+    path_id: str
+    path_title: str
+    total_courses: int = 0
+    completed_courses: int = 0
+    in_progress_courses: int = 0
+    completion_percentage: float = 0.0
+    total_time_spent_minutes: int = 0
+    courses: list[CourseProgressStatus] = []
+
+class DashboardStats(BaseModel):
+    """User's overall learning dashboard statistics."""
+    user_id: str
+    active_paths: int = 0
+    courses_in_progress: int = 0
+    courses_completed: int = 0
+    modules_completed_week: int = 0
+    modules_completed_month: int = 0
+    modules_completed_total: int = 0
+    average_quiz_score: float | None = None
+    total_quizzes_taken: int = 0
+    total_study_time_minutes: int = 0
+    current_streak: int = 0
+    longest_streak: int = 0
+
+class RecentActivity(BaseModel):
+    """A single recent activity entry."""
+    id: str
+    user_id: str
+    activity_type: Literal["module_started", "module_completed", "quiz_submitted", "content_read"]
+    module_id: str | None = None
+    module_title: str | None = None
+    course_id: str | None = None
+    course_title: str | None = None
+    details: dict = {}
+    created_at: datetime
+
+class NextUpItem(BaseModel):
+    """Recommended next module/course to study."""
+    item_type: Literal["module", "course"]
+    module_id: str | None = None
+    module_title: str | None = None
+    course_id: str
+    course_title: str
+    reason: str  # e.g., "Continue where you left off", "Next in path"
+```
+
+### Flashcard Ratings
+
+```python
+class FlashcardRating(str, Enum):
+    """Rating options for flashcards."""
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+    UNHELPFUL = "unhelpful"
+
+class FlashcardRatingRecord(BaseModel):
+    """A user's rating for a specific flashcard."""
+    id: str
+    user_id: str
+    course_id: str
+    module_id: str
+    flashcard_index: int
+    flashcard_id: str | None = None
+    rating: FlashcardRating
+    created_at: datetime
+    updated_at: datetime
+
+class RateFlashcardRequest(BaseModel):
+    """Request to rate a flashcard."""
+    flashcard_index: int
+    flashcard_id: str | None = None
+    rating: FlashcardRating
+
+class FlashcardRatingSummary(BaseModel):
+    """Summary of ratings for a module's flashcards."""
+    total: int
+    unrated: int
+    easy: int
+    medium: int
+    hard: int
+    unhelpful: int
+
+class FilteredFlashcard(BaseModel):
+    """A flashcard with its rating status."""
+    index: int
+    id: str | None = None
+    front: str
+    back: str
+    visual: str | None = None
+    rating: FlashcardRating | None = None
 ```
 
 ### Notifications
@@ -368,18 +409,29 @@ class Course(BaseModel):
 
 ```python
 class FlashcardData(BaseModel):
+    """Flashcard within a module."""
+    id: str | None = None  # Optional ID for tracking ratings
     front: str
     back: str
     visual: str | None = None
 
 class QuizQuestionData(BaseModel):
+    """Quiz question within a module."""
     question: str
     options: list[str]
     correct_index: int
     explanation: str | None = None
 
 class QuizData(BaseModel):
+    """Quiz for a module."""
     questions: list[QuizQuestionData] = []
+
+class SandboxData(BaseModel):
+    """Code sandbox for hands-on practice within a module."""
+    language: Literal["python", "javascript"] = "python"
+    starter_code: str = ""
+    solution_code: str | None = None
+    instructions: str | None = None
 
 class Module(BaseModel):
     id: str
@@ -389,6 +441,7 @@ class Module(BaseModel):
     content_markdown: str = ""
     flashcards: list[FlashcardData] = []
     quiz: QuizData | None = None
+    sandbox: SandboxData | None = None
     created_at: datetime
     updated_at: datetime
 ```
@@ -466,13 +519,11 @@ All API errors return a structured JSON response:
 | **Access** | `FORBIDDEN` | 403 | Permission denied |
 | | `ACCESS_DENIED` | 403 | Resource access denied |
 | **Resources** | `NOT_FOUND` | 404 | Generic not found |
-| | `DECK_NOT_FOUND` | 404 | Deck doesn't exist |
-| | `CARD_NOT_FOUND` | 404 | Card doesn't exist |
-| | `QUIZ_NOT_FOUND` | 404 | Quiz doesn't exist |
 | | `USER_NOT_FOUND` | 404 | User doesn't exist |
 | | `COURSE_NOT_FOUND` | 404 | Course doesn't exist |
 | | `MODULE_NOT_FOUND` | 404 | Module doesn't exist |
 | | `LEARNING_PATH_NOT_FOUND` | 404 | Learning path doesn't exist |
+| | `FLASHCARD_NOT_FOUND` | 404 | Flashcard doesn't exist |
 | **Authoring** | `COURSE_NOT_EDITABLE` | 403 | User can't edit this course |
 | | `INVALID_MODULE_ORDER` | 400 | Invalid module ordering |
 | | `IMAGE_DOWNLOAD_FAILED` | 400 | Failed to download image |
