@@ -156,4 +156,4 @@ npm run lint --prefix frontend
 
 ## License
 
-MIT
+Apache-2.0 - See [LICENSE](LICENSE) for details.

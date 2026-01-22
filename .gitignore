@@ -95,3 +95,5 @@ backend/.pytest_cache/
 
 # Claude Code
 .claude/settings.local.json
+*/CLAUDE.md
+!CLAUDE.md
