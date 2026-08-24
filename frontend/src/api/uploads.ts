@@ -1,6 +1,6 @@
 import type { ImageUploadResponse } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 /**
  * Upload an image file to a course
