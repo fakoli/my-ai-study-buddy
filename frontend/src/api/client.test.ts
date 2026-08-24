@@ -21,7 +21,12 @@ describe('api client', () => {
     await api.get('/auth/me');
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toContain('/api/v1/auth/me');
+    // The URL is BASE_URL + path; BASE_URL defaults to /api/v1 but a dev's
+    // .env.local (VITE_API_URL) may override it. Assert via the same
+    // resolution so the spec is environment-proof.
+    expect(url).toContain(
+      `${(import.meta.env.VITE_API_URL as string | undefined) || '/api/v1'}/auth/me`
+    );
     expect(init.headers.Authorization).toBe('Bearer secret-token');
     expect(init.headers['Content-Type']).toBe('application/json');
   });

@@ -102,7 +102,14 @@ export function useAuth() {
       if (localStorage.getItem(TOKEN_KEY) === ourToken) {
         localStorage.removeItem(TOKEN_KEY);
       }
-      setState({ user: null, isLoading: false, isAuthenticated: false });
+      // Sign out only if no other session is live: a concurrent login that
+      // completed while our me() was failing left a valid token + state, and
+      // our failure must not paint signed-out over it (OX Alpha #9).
+      setState((s) =>
+        localStorage.getItem(TOKEN_KEY) === null
+          ? { user: null, isLoading: false, isAuthenticated: false }
+          : s
+      );
       throw new Error('Login failed');
     }
   };
