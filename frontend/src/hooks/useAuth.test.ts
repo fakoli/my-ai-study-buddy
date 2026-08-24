@@ -141,18 +141,91 @@ describe('useAuth', () => {
     expect(result.current.isAuthenticated).toBe(true);
   });
 
-  it('cross-tab storage events re-check auth when the token changes', async () => {
+  it('cross-tab storage events re-check auth and converge state when the token changes', async () => {
     setToken('token-1');
     mockAuthApi.me.mockResolvedValue(user as never);
-    renderHook(() => useAuth());
-    await waitFor(() => expect(mockAuthApi.me).toHaveBeenCalledTimes(1));
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+    expect(mockAuthApi.me).toHaveBeenCalledTimes(1);
 
-    // Simulate another tab logging out (removing the shared token).
-    mockAuthApi.me.mockResolvedValueOnce(user as never);
+    // Simulate another tab logging out: it removes the shared token and
+    // fires a storage event (newValue null).
+    setToken(null);
+    mockAuthApi.me.mockResolvedValue(user as never);
     await act(async () => {
       window.dispatchEvent(new StorageEvent('storage', { key: TOKEN_KEY, newValue: null }));
     });
-    // The hook re-runs checkAuth on the storage event.
-    expect(mockAuthApi.me).toHaveBeenCalledTimes(2);
+    // After re-check, no token -> must converge to signed-out, not just
+    // "re-called me()". (me() is NOT called again: checkAuth short-circuits
+    // on the missing token and sets signed-out directly.)
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(false));
+    expect(result.current.user).toBeNull();
+    expect(mockAuthApi.me).toHaveBeenCalledTimes(1);
+  });
+
+  it('REGRESSION: a slow checkAuth SUCCESS must not paint an old user over a concurrent login (account-mismatch clobber)', async () => {
+    // Mirror of the failure-side regression: mount with token-A, checkAuth
+    // (in-flight, slow, will SUCCEED with userA). While in flight, a
+    // concurrent login replaces the token with B and authenticates as userB.
+    // When the stale checkAuth success lands, it must NOT overwrite userB
+    // with userA nor mark us authenticated against the old token.
+    setToken('token-A');
+    const userA = { id: 'uA', email: 'old@a.com', name: 'Old A', role: 'user' } as const;
+    const userB = { id: 'uB', email: 'new@b.com', name: 'New B', role: 'user' } as const;
+    const staleMe = vi.fn();
+    staleMe.mockReturnValue(new Promise((resolve) => setTimeout(() => resolve(userA), 20)));
+    mockAuthApi.me.mockImplementationOnce(staleMe as never);
+
+    const { result } = renderHook(() => useAuth());
+
+    // Concurrent login writes token-B and authenticates as userB.
+    mockAuthApi.login.mockResolvedValue({ access_token: 'token-B' } as never);
+    mockAuthApi.me.mockResolvedValueOnce(userB as never);
+    await act(async () => {
+      await result.current.login({ email: 'new@b.com', password: 'pw' });
+    });
+    expect(result.current.user).toEqual(userB);
+
+    // Let the stale checkAuth success resolve. The guard must keep userB.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 40));
+    });
+    expect(localStorage.getItem(TOKEN_KEY)).toBe('token-B');
+    expect(result.current.user).toEqual(userB);
+    expect(result.current.isAuthenticated).toBe(true);
+  });
+
+  it('REGRESSION: logout during an in-flight login must not resurrect auth (logout-resurrection race)', async () => {
+    // login(B) writes token-B, then its me() is slow. A logout completes
+    // meanwhile (removes token-B, sets signed-out). When login's me() lands,
+    // the hook must NOT mark authenticated with no token in storage.
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    // Login B: the login() writes token-B, then me() for B is slow.
+    mockAuthApi.login.mockResolvedValue({ access_token: 'token-B' } as never);
+    const slowMe = vi.fn();
+    slowMe.mockReturnValue(new Promise((resolve) => setTimeout(() => resolve(user), 30)));
+    mockAuthApi.me.mockImplementationOnce(slowMe as never);
+    let loginPromise!: Promise<void>;
+    act(() => {
+      loginPromise = result.current.login({ email: 'b@b.com', password: 'pw' });
+    });
+
+    // Logout lands first: removes token-B, signs out.
+    mockAuthApi.logout.mockResolvedValue({} as never);
+    await act(async () => {
+      await result.current.logout();
+    });
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(result.current.isAuthenticated).toBe(false);
+
+    // Now login's slow me() resolves — the guard must NOT resurrect auth
+    // (token was removed; a signed-out UI with no token is correct).
+    await act(async () => {
+      await loginPromise;
+    });
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    expect(result.current.isAuthenticated).toBe(false);
   });
 });

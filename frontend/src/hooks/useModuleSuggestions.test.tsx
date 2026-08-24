@@ -124,7 +124,7 @@ describe('useModuleSuggestions error paths', () => {
 
   it('confirmSuggestions shows the generic failure toast when no modules can be created', async () => {
     const toast = makeToast();
-    const { wrapper } =makeWrapper(toast);
+    const { wrapper } = makeWrapper(toast);
     vi.mocked(useGenerateModuleContent).mockReturnValue({
       mutateAsync: vi.fn().mockRejectedValue(new Error('gen failed')),
     } as never);

@@ -24,12 +24,17 @@ jobs:
         run: uv sync --dev
 
       # Run the full suite from a clean env (no ambient DEBUG) to prove the
-      # suite is hermetic (ticket 006 / OX Alpha finding 6).
+      # suite is hermetic (ticket 006 / OX Alpha finding 6). No pipe: the
+      # step's exit code must be pytest's so red tests fail the job.
       - name: Run backend test suite
-        run: env -u DEBUG uv run pytest tests/ -q --cov=. --cov-report=term-missing | tail -30
+        run: env -u DEBUG uv run pytest tests/ -q --cov=. --cov-report=term-missing
 
   frontend:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24]
     defaults:
       run:
         working-directory: frontend
@@ -39,7 +44,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
         run: npm ci
@@ -47,8 +52,8 @@ jobs:
       - name: Run frontend test suite
         run: npm run test
 
-      # Lint is intentionally non-blocking until ticket 004 (pre-existing
-      # eslint errors) lands; failures still surface in the job log.
+      # Lint is intentionally non-blocking until ticket 005 (pre-existing
+      # frontend eslint errors) lands; failures still surface in the job log.
       - name: Lint (informational)
-        run: npm run lint || true
+        run: npm run lint
         continue-on-error: true
