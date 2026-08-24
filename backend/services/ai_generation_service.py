@@ -769,7 +769,7 @@ Requirements:
         try:
             result = await client.generate_image(
                 image_prompt,
-                model=self.settings.anvil_vision_model,
+                model=self.settings.anvil_image_model,
             )
 
             if not result:

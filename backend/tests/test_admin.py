@@ -369,10 +369,12 @@ async def test_adjust_tokens_rollback_on_transaction_failure(client, admin_heade
         headers=admin_headers,
     )
     assert response.status_code == 500  # Internal server error
-    assert create_call_count >= 1  # the failure path was actually exercised
+    assert create_call_count == 1  # the failure path was actually exercised
 
-    # Verify balance was rolled back
-    user = await storage.get("users", user_id)
+    # Verify balance was rolled back — read through the patched backend
+    # (the singleton the app writes through), not the unpatched fixture,
+    # so an in-memory cache could never hide a missed rollback.
+    user = await backend.get("users", user_id)
     assert user["token_balance"] == original_balance
 
 

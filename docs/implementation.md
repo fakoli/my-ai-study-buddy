@@ -56,7 +56,7 @@ TWILIO_PHONE_NUMBER=+1234567890
 ANVIL_ROUTER_BASE_URL=https://fakoli-dark.tail4378d.ts.net/v1
 ANVIL_ROUTER_TOKEN=your-router-token
 ANVIL_MODEL=llm.primary
-ANVIL_VISION_MODEL=vision.general
+ANVIL_IMAGE_MODEL=gemini-nano-banana
 ```
 
 ---

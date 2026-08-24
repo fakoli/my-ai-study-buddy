@@ -172,6 +172,19 @@ async def health_check():
     return {"status": "healthy", "app": settings.app_name}
 
 
+@app.get("/__force_500")
+async def force_500():
+    """Test-only route that raises, to exercise the generic exception handler.
+
+    Registered only when DEBUG is true (never in production).
+    """
+    if not settings.debug:  # pragma: no cover - prod guard
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Not found")
+    raise RuntimeError("Forced 500 for exception-handler test")
+
+
 # Import and register routers
 from api.routes import auth, progress, references, ai, notifications
 from api.routes import courses, learning_paths, modules, uploads, generation
