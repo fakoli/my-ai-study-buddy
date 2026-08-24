@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 
 from config import Settings
-from exceptions import AIServiceException, InsufficientTokensException
+from exceptions import InsufficientTokensException
+from services.anvil_client import get_anvil_client
 from services.auth_service import AuthService
 from storage.base import StorageBackend
 
@@ -54,37 +55,18 @@ class AIService:
         await self.auth_service.consume_tokens(user_id, amount)
 
     async def _call_ai(self, prompt: str, system_prompt: str | None = None) -> str:
-        """Call the AI provider.
+        """Call the Anvil router for text generation.
 
         Raises:
-            AIServiceException: If API key is not configured or API call fails.
+            AIServiceException: If the router is not configured or the call fails.
         """
-        if not self.settings.anthropic_api_key:
-            raise AIServiceException("AI service not configured: missing API key")
-
-        try:
-            import anthropic
-
-            client = anthropic.Anthropic(api_key=self.settings.anthropic_api_key)
-
-            messages = [{"role": "user", "content": prompt}]
-
-            response = client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=1024,
-                system=system_prompt
-                or "You are a helpful study assistant. Be concise and educational.",
-                messages=messages,
-            )
-
-            return response.content[0].text
-
-        except anthropic.APIConnectionError as e:
-            raise AIServiceException(f"Failed to connect to AI service: {e}")
-        except anthropic.RateLimitError as e:
-            raise AIServiceException(f"AI service rate limit exceeded: {e}")
-        except anthropic.APIStatusError as e:
-            raise AIServiceException(f"AI service error: {e.message}")
+        client = get_anvil_client(self.settings)
+        return await client.complete(
+            prompt,
+            system_prompt=system_prompt
+            or "You are a helpful study assistant. Be concise and educational.",
+            max_tokens=1024,
+        )
 
     async def explain(self, user_id: str, request: ExplainRequest) -> AIResponse:
         """Explain a concept."""

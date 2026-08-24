@@ -717,33 +717,15 @@ export interface GeneratedVisual {
 }
 
 // ============================================
-// User API Settings Types
+// AI Connection Types
 // ============================================
 
-/** API provider options */
-export type APIProvider = 'anthropic' | 'gemini';
-
-/** User API settings response (without exposing the actual key) */
-export interface UserAPISettingsResponse {
-  id: string;
-  user_id: string;
-  provider: APIProvider;
-  key_hint: string;
-  is_valid: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-/** Request to set/update an API key */
-export interface UserAPISettingsCreate {
-  provider: APIProvider;
-  api_key: string;
-}
-
-/** Response from API key validation */
-export interface UserAPISettingsValidateResponse {
-  provider: APIProvider;
-  is_valid: boolean;
+/** Status of the server-side Anvil router connection */
+export interface AIConnectionStatus {
+  provider: string;
+  is_configured: boolean;
+  is_reachable: boolean;
+  model: string | null;
   message: string;
 }
 

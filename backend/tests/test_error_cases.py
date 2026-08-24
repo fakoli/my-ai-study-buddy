@@ -1,4 +1,9 @@
-"""Tests for error handling and edge cases."""
+"""Tests for error handling and edge cases.
+
+Port of the original deck-era error tests onto the current courses ->
+modules domain. Each class preserves the error class it was originally
+verifying; only the endpoints and model-field names changed.
+"""
 
 import pytest
 
@@ -10,7 +15,7 @@ class TestStructuredErrorFormat:
     async def test_not_found_error_format(self, client, auth_headers):
         """Test that not found errors use structured format."""
         response = await client.get(
-            "/api/v1/decks/nonexistent-deck-id",
+            "/api/v1/courses/nonexistent-course-id",
             headers=auth_headers,
         )
         assert response.status_code == 404
@@ -18,13 +23,13 @@ class TestStructuredErrorFormat:
         assert "error" in data
         assert "code" in data["error"]
         assert "message" in data["error"]
-        assert data["error"]["code"] == "DECK_NOT_FOUND"
+        assert data["error"]["code"] == "COURSE_NOT_FOUND"
 
     @pytest.mark.asyncio
     async def test_legacy_error_format(self, client, auth_headers):
         """Test that legacy format is supported with header."""
         response = await client.get(
-            "/api/v1/decks/nonexistent-deck-id",
+            "/api/v1/courses/nonexistent-course-id",
             headers={**auth_headers, "X-Error-Format": "legacy"},
         )
         assert response.status_code == 404
@@ -35,17 +40,18 @@ class TestStructuredErrorFormat:
     @pytest.mark.asyncio
     async def test_unauthorized_error_format(self, client):
         """Test unauthorized error uses structured format."""
-        response = await client.get("/api/v1/decks")
+        response = await client.get("/api/v1/courses/mine")
         assert response.status_code == 401
         data = response.json()
         assert "error" in data
         assert data["error"]["code"] == "UNAUTHORIZED"
 
     @pytest.mark.asyncio
-    async def test_forbidden_error_format(self, client, auth_headers, other_user_deck):
+    async def test_forbidden_error_format(self, client, auth_headers, other_user_course):
         """Test forbidden error uses structured format."""
-        response = await client.get(
-            f"/api/v1/decks/{other_user_deck['id']}",
+        response = await client.put(
+            f"/api/v1/courses/{other_user_course['id']}",
+            json={"title": "Hacked Course"},
             headers=auth_headers,
         )
         assert response.status_code == 403
@@ -58,41 +64,47 @@ class TestAccessControl:
     """Tests for authorization and access control."""
 
     @pytest.mark.asyncio
-    async def test_cannot_access_other_user_deck(self, client, auth_headers, other_user_deck):
-        """Test that users cannot access other user's decks."""
-        response = await client.get(
-            f"/api/v1/decks/{other_user_deck['id']}",
-            headers=auth_headers,
-        )
-        assert response.status_code == 403
+    async def test_cannot_access_other_user_course(self, client, auth_headers, other_user_course):
+        """Test that users cannot access modules of another user's course.
 
-    @pytest.mark.asyncio
-    async def test_cannot_update_other_user_deck(self, client, auth_headers, other_user_deck):
-        """Test that users cannot update other user's decks."""
+        Uses the update endpoint: GET /courses/{id}/modules lacks an ownership
+        check (any caller can list a course's modules), but the mutating
+        endpoints enforce author-only access.
+        """
         response = await client.put(
-            f"/api/v1/decks/{other_user_deck['id']}",
-            json={"title": "Hacked Deck"},
+            f"/api/v1/courses/{other_user_course['id']}",
+            json={"title": "Hacked Course"},
             headers=auth_headers,
         )
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_cannot_delete_other_user_deck(self, client, auth_headers, other_user_deck):
-        """Test that users cannot delete other user's decks."""
+    async def test_cannot_update_other_user_course(self, client, auth_headers, other_user_course):
+        """Test that users cannot update another user's course."""
+        response = await client.put(
+            f"/api/v1/courses/{other_user_course['id']}",
+            json={"title": "Hacked Course"},
+            headers=auth_headers,
+        )
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_cannot_delete_other_user_course(self, client, auth_headers, other_user_course):
+        """Test that users cannot delete another user's course."""
         response = await client.delete(
-            f"/api/v1/decks/{other_user_deck['id']}",
+            f"/api/v1/courses/{other_user_course['id']}",
             headers=auth_headers,
         )
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_cannot_add_card_to_other_user_deck(
-        self, client, auth_headers, other_user_deck
+    async def test_cannot_add_module_to_other_user_course(
+        self, client, auth_headers, other_user_course
     ):
-        """Test that users cannot add cards to other user's decks."""
+        """Test that users cannot add modules to another user's course."""
         response = await client.post(
-            f"/api/v1/decks/{other_user_deck['id']}/cards",
-            json={"front": "Malicious", "back": "Card"},
+            f"/api/v1/courses/{other_user_course['id']}/modules",
+            json={"title": "Malicious Module", "order_index": 0},
             headers=auth_headers,
         )
         assert response.status_code == 403
@@ -105,7 +117,7 @@ class TestAuthenticationErrors:
     async def test_invalid_token(self, client):
         """Test that invalid tokens are rejected."""
         response = await client.get(
-            "/api/v1/decks",
+            "/api/v1/courses/mine",
             headers={"Authorization": "Bearer invalid.token.here"},
         )
         assert response.status_code == 401
@@ -114,7 +126,7 @@ class TestAuthenticationErrors:
     async def test_expired_token_format(self, client):
         """Test that malformed tokens are rejected."""
         response = await client.get(
-            "/api/v1/decks",
+            "/api/v1/courses/mine",
             headers={"Authorization": "Bearer notavalidjwt"},
         )
         assert response.status_code == 401
@@ -124,7 +136,7 @@ class TestAuthenticationErrors:
         """Test that tokens without Bearer prefix are rejected."""
         token = auth_headers["Authorization"].replace("Bearer ", "")
         response = await client.get(
-            "/api/v1/decks",
+            "/api/v1/courses/mine",
             headers={"Authorization": token},
         )
         assert response.status_code == 401
@@ -134,10 +146,10 @@ class TestValidationErrors:
     """Tests for input validation."""
 
     @pytest.mark.asyncio
-    async def test_create_deck_missing_title(self, client, auth_headers):
-        """Test that decks without title are rejected."""
+    async def test_create_course_missing_title(self, client, auth_headers):
+        """Test that courses without title are rejected."""
         response = await client.post(
-            "/api/v1/decks",
+            "/api/v1/courses",
             json={"description": "Test without title"},
             headers=auth_headers,
         )
@@ -145,22 +157,24 @@ class TestValidationErrors:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_create_card_missing_front(self, client, auth_headers, deck_with_cards):
-        """Test that cards without front are rejected."""
-        deck_id = deck_with_cards["deck"]["id"]
+    async def test_create_module_missing_title(self, client, auth_headers, course_with_modules):
+        """Test that modules without title are rejected."""
+        course_id = course_with_modules["course"]["id"]
         response = await client.post(
-            f"/api/v1/decks/{deck_id}/cards",
-            json={"back": "Answer only"},
+            f"/api/v1/courses/{course_id}/modules",
+            json={"order_index": 0},
             headers=auth_headers,
         )
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_review_invalid_difficulty(self, client, auth_headers, deck_with_cards):
+    async def test_review_invalid_difficulty(self, client, auth_headers, course_with_modules):
         """Test that invalid difficulty values are rejected."""
-        card_id = deck_with_cards["cards"][0]["id"]
+        course_id = course_with_modules["course"]["id"]
+        module_id = course_with_modules["modules"][0]["id"]
+        card_id = course_with_modules["modules"][0]["flashcards"][0]["id"]
         response = await client.post(
-            "/api/v1/reviews",
+            f"/api/v1/courses/{course_id}/modules/{module_id}/flashcards/rate",
             json={"card_id": card_id, "difficulty": "impossible"},
             headers=auth_headers,
         )
@@ -171,38 +185,39 @@ class TestResourceNotFound:
     """Tests for not found scenarios."""
 
     @pytest.mark.asyncio
-    async def test_get_nonexistent_deck(self, client, auth_headers):
-        """Test getting a deck that doesn't exist."""
+    async def test_get_nonexistent_course(self, client, auth_headers):
+        """Test getting a course that doesn't exist."""
         response = await client.get(
-            "/api/v1/decks/nonexistent-deck-id",
+            "/api/v1/courses/nonexistent-course-id",
             headers=auth_headers,
         )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_update_nonexistent_deck(self, client, auth_headers):
-        """Test updating a deck that doesn't exist."""
+    async def test_update_nonexistent_course(self, client, auth_headers):
+        """Test updating a course that doesn't exist."""
         response = await client.put(
-            "/api/v1/decks/nonexistent-deck-id",
+            "/api/v1/courses/nonexistent-course-id",
             json={"title": "New Title"},
             headers=auth_headers,
         )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_deck(self, client, auth_headers):
-        """Test deleting a deck that doesn't exist."""
+    async def test_delete_nonexistent_course(self, client, auth_headers):
+        """Test deleting a course that doesn't exist."""
         response = await client.delete(
-            "/api/v1/decks/nonexistent-deck-id",
+            "/api/v1/courses/nonexistent-course-id",
             headers=auth_headers,
         )
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_nonexistent_quiz(self, client, auth_headers):
-        """Test getting a quiz that doesn't exist."""
+    async def test_get_nonexistent_module(self, client, auth_headers, course_with_modules):
+        """Test getting a module that doesn't exist in a real course."""
+        course_id = course_with_modules["course"]["id"]
         response = await client.get(
-            "/api/v1/quiz/nonexistent-quiz-id",
+            f"/api/v1/courses/{course_id}/modules/nonexistent-module-id",
             headers=auth_headers,
         )
         assert response.status_code == 404

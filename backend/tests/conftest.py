@@ -1,10 +1,11 @@
+import shutil
+import tempfile
+
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from main import app
 from storage.json_storage import JSONStorage
-import tempfile
-import shutil
 
 
 @pytest.fixture
@@ -22,8 +23,8 @@ def storage(temp_storage_path):
 @pytest.fixture(autouse=True)
 def use_test_storage(temp_storage_path, monkeypatch):
     """Ensure tests use temporary storage."""
-    from storage import reset_storage
     from config import get_settings
+    from storage import reset_storage
 
     # Reset the storage singleton before each test
     reset_storage()
@@ -92,56 +93,56 @@ async def other_user_headers(client):
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
-async def deck_with_cards(client, auth_headers):
-    """Create a deck with some cards for testing."""
-    # Create deck
-    response = await client.post(
-        "/api/v1/decks",
-        json={"title": "Test Deck", "description": "A test deck"},
-        headers=auth_headers,
-    )
-    assert response.status_code == 200
-    deck = response.json()
+async def _create_course(client, headers, title="Test Course", **overrides):
+    """Create a course owned by the authenticated user."""
+    payload = {
+        "title": title,
+        "description": "A test course",
+        **overrides,
+    }
+    response = await client.post("/api/v1/courses", json=payload, headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()
 
-    # Add cards
-    cards = []
+
+@pytest.fixture
+async def course_with_modules(client, auth_headers):
+    """Create a course with modules for testing the current domain."""
+    course = await _create_course(client, auth_headers)
+
+    modules = []
     for i in range(3):
         response = await client.post(
-            f"/api/v1/decks/{deck['id']}/cards",
+            f"/api/v1/courses/{course['id']}/modules",
             json={
-                "front": f"Question {i + 1}",
-                "back": f"Answer {i + 1}",
+                "title": f"Module {i + 1}",
+                "order_index": i,
+                "content_markdown": f"# Module {i + 1} content",
+                "flashcards": [
+                    {"front": f"Question {i + 1}", "back": f"Answer {i + 1}"}
+                ],
+                "quiz": {
+                    "questions": [
+                        {
+                            "question": f"Q{i + 1}?",
+                            "options": ["A", "B", "C"],
+                            "correct_index": 0,
+                            "explanation": None,
+                        }
+                    ]
+                },
             },
             headers=auth_headers,
         )
-        assert response.status_code == 200
-        cards.append(response.json())
+        assert response.status_code == 200, response.text
+        modules.append(response.json())
 
-    return {"deck": deck, "cards": cards}
-
-
-@pytest.fixture
-async def generated_quiz(client, auth_headers, deck_with_cards):
-    """Generate a quiz from a deck for submission tests."""
-    deck_id = deck_with_cards["deck"]["id"]
-
-    response = await client.post(
-        "/api/v1/quiz/generate",
-        json={"deck_id": deck_id, "num_questions": 3},
-        headers=auth_headers,
-    )
-    assert response.status_code == 200
-    return response.json()
+    return {"course": course, "modules": modules}
 
 
 @pytest.fixture
-async def other_user_deck(client, other_user_headers):
-    """Create a deck owned by another user for forbidden access tests."""
-    response = await client.post(
-        "/api/v1/decks",
-        json={"title": "Other User Deck", "description": "Should not be accessible"},
-        headers=other_user_headers,
+async def other_user_course(client, other_user_headers):
+    """Create a course owned by another user for forbidden access tests."""
+    return await _create_course(
+        client, other_user_headers, title="Other User Course", description="Should not be accessible"
     )
-    assert response.status_code == 200
-    return response.json()

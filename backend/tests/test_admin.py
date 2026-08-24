@@ -1,8 +1,6 @@
 """Tests for admin service and API routes."""
 
 import pytest
-from storage import get_storage
-from models.user import UserRole
 
 
 @pytest.fixture
@@ -343,8 +341,16 @@ async def test_adjust_tokens_rollback_on_transaction_failure(client, admin_heade
     user_id = regular_user_with_tokens["id"]
     original_balance = 50
 
-    # Mock storage.create to fail on transaction creation
-    original_create = storage.create
+    # The app's dependency (dependencies.get_storage) returns the process-wide
+    # singleton from storage.get_storage_backend(), NOT the `storage` fixture's
+    # fresh JSONStorage instance. Patch the singleton's create so the request
+    # actually sees the failure (see .tickets/002 for the root-cause analysis).
+    from config import get_settings
+    from storage import get_storage_backend
+
+    backend = get_storage_backend(get_settings())
+    assert backend is not storage  # guard: if this stops being true, either patch works
+    original_create = backend.create
     create_call_count = 0
 
     async def mock_create(collection, data):
@@ -354,7 +360,7 @@ async def test_adjust_tokens_rollback_on_transaction_failure(client, admin_heade
             raise Exception("Simulated transaction logging failure")
         return await original_create(collection, data)
 
-    monkeypatch.setattr(storage, "create", mock_create)
+    monkeypatch.setattr(backend, "create", mock_create)
 
     # Attempt to adjust tokens
     response = await client.put(
@@ -363,6 +369,7 @@ async def test_adjust_tokens_rollback_on_transaction_failure(client, admin_heade
         headers=admin_headers,
     )
     assert response.status_code == 500  # Internal server error
+    assert create_call_count >= 1  # the failure path was actually exercised
 
     # Verify balance was rolled back
     user = await storage.get("users", user_id)

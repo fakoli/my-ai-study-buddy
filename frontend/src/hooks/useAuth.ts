@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { authApi } from '../api/auth';
 import type { User, UserCreate, UserLogin } from '../types';
 
@@ -8,32 +8,17 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
-/**
- * Subscribe to localStorage changes from other tabs
- */
+const TOKEN_KEY = 'token';
+
+/** Subscribe to token changes from other tabs */
 function subscribeToStorageChanges(callback: () => void) {
   const handleStorageChange = (event: StorageEvent) => {
-    if (event.key === 'token') {
+    if (event.key === TOKEN_KEY) {
       callback();
     }
   };
-
   window.addEventListener('storage', handleStorageChange);
   return () => window.removeEventListener('storage', handleStorageChange);
-}
-
-/**
- * Get current token from localStorage (snapshot function)
- */
-function getTokenSnapshot(): string | null {
-  return localStorage.getItem('token');
-}
-
-/**
- * Server snapshot function (for SSR - returns null)
- */
-function getServerTokenSnapshot(): string | null {
-  return null;
 }
 
 export function useAuth() {
@@ -43,17 +28,11 @@ export function useAuth() {
     isAuthenticated: false,
   });
 
-  // Use useSyncExternalStore for cross-tab sync of token changes
-  // This will trigger a re-render when the token changes in localStorage
-  // (including from other tabs)
-  const token = useSyncExternalStore(
-    subscribeToStorageChanges,
-    getTokenSnapshot,
-    getServerTokenSnapshot
-  );
-
+  // Always read the token fresh from localStorage — never capture it in a
+  // closure. A stale captured value is what used to wipe valid sessions on
+  // re-render (token verified OK by /auth/me, then removed moments later).
   const checkAuth = useCallback(async () => {
-    const currentToken = localStorage.getItem('token');
+    const currentToken = localStorage.getItem(TOKEN_KEY);
     if (!currentToken) {
       setState({ user: null, isLoading: false, isAuthenticated: false });
       return;
@@ -63,20 +42,43 @@ export function useAuth() {
       const user = await authApi.me();
       setState({ user, isLoading: false, isAuthenticated: true });
     } catch {
-      localStorage.removeItem('token');
+      // Only clear the token if it is still the one we verified. If a
+      // concurrent login replaced it in the meantime, leave the new token
+      // alone and re-check it instead of destroying a fresh session.
+      const latest = localStorage.getItem(TOKEN_KEY);
+      if (latest === currentToken) {
+        localStorage.removeItem(TOKEN_KEY);
+      }
       setState({ user: null, isLoading: false, isAuthenticated: false });
     }
   }, []);
 
-  // Re-check auth when token changes (including from other tabs)
+  // Re-check on mount and whenever the token in storage changes (including
+  // from other tabs). checkAuth is stable, so this effect cannot re-fire in
+  // a loop.
   useEffect(() => {
     checkAuth();
-  }, [checkAuth, token]);
+  }, [checkAuth]);
+
+  // Cross-tab session sync: when another tab logs in or out (which writes or
+  // removes the token in shared localStorage), the browser fires a `storage`
+  // event in this tab. Re-run the same fresh-read checkAuth so both tabs
+  // converge on the same session state. checkAuth is stable, so this effect
+  // attaches once and cleans up its listener on unmount.
+  useEffect(() => subscribeToStorageChanges(checkAuth), [checkAuth]);
 
   const login = async (credentials: UserLogin) => {
     const response = await authApi.login(credentials);
-    localStorage.setItem('token', response.access_token);
-    await checkAuth();
+    localStorage.setItem(TOKEN_KEY, response.access_token);
+    // Set state directly from the verified token; do not round-trip through
+    // checkAuth here so a stale concurrent call cannot race us.
+    try {
+      const user = await authApi.me();
+      setState({ user, isLoading: false, isAuthenticated: true });
+    } catch {
+      localStorage.removeItem(TOKEN_KEY);
+      throw new Error('Login failed');
+    }
   };
 
   const register = async (data: UserCreate) => {
@@ -88,7 +90,7 @@ export function useAuth() {
     try {
       await authApi.logout();
     } finally {
-      localStorage.removeItem('token');
+      localStorage.removeItem(TOKEN_KEY);
       setState({ user: null, isLoading: false, isAuthenticated: false });
     }
   };

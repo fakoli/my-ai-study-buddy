@@ -8,10 +8,9 @@ A learning platform for visual learners who learn by doing. Combines flashcards,
 - **Quizzes**: AI-generated quizzes to test your knowledge
 - **Course Authoring**: Create structured courses with modules, content, and assessments
 - **Learning Paths**: Organize courses into learning paths for guided learning
-- **AI-Powered Content**: Generate module content, flashcards, quizzes, and visuals using AI
+- **AI-Powered Content**: Generate module content, flashcards, quizzes, and visuals via the self-hosted Anvil router
 - **Progress Tracking**: Track your learning progress, streaks, and mastery
 - **Admin Console**: User management and token administration (admin role)
-- **User API Keys**: Users can provide their own Claude/Gemini API keys
 - **Notifications**: Configurable email and SMS reminders
 
 ## Tech Stack
@@ -23,7 +22,7 @@ A learning platform for visual learners who learn by doing. Combines flashcards,
 | Data Models | Pydantic v2 |
 | Content | Markdown files |
 | Persistence | JSON (local), SQLite/Supabase (production) |
-| AI | Claude API (text), Gemini (images) |
+| AI | Anvil Serving router (self-hosted, OpenAI-compatible) |
 
 ## Quick Start
 
@@ -41,10 +40,10 @@ uv sync
 
 # Copy and configure environment
 cp .env.example .env
-# Edit .env with your settings (ANTHROPIC_API_KEY, etc.)
+# Edit .env with your settings (ANVIL_ROUTER_BASE_URL, ANVIL_ROUTER_TOKEN, etc.)
 
-# Run development server
-uv run uvicorn main:app --reload --port 8000
+# Run development server (port 8010 to match frontend proxy)
+uv run uvicorn main:app --reload --port 8010
 ```
 
 ### Frontend Setup
@@ -57,6 +56,27 @@ npm run dev
 
 The app will be available at `http://localhost:5173`.
 
+### Tailnet deployment and E2E
+
+On `fakoli-mini`, the production-style test stack is exposed only to the
+Tailscale tailnet. FastAPI and the Node host bind to loopback; Tailscale Serve
+terminates HTTPS on port 4443. Existing Serve routes on ports 443, 8443, and
+9120 are left unchanged.
+
+```bash
+# Build the frontend, start the loopback services, and configure Tailscale Serve
+./scripts/start-tailnet.sh
+
+# Run the full HTTPS E2E: register, login, Anvil health, text generation,
+# course/module persistence, and structured flashcard generation
+uv run --no-project python scripts/e2e-tailnet.py
+
+# Stop the processes and remove only the :4443 Tailscale Serve route
+./scripts/stop-tailnet.sh
+```
+
+Tailnet URL: `https://fakoli-mini.tail4378d.ts.net:4443/`
+
 ## Environment Variables
 
 Create a `.env` file in the project root (or `backend/` directory):
@@ -66,9 +86,11 @@ Create a `.env` file in the project root (or `backend/` directory):
 DEBUG=true
 JWT_SECRET=your-secret-key
 
-# AI Services (at least one required for AI features)
-ANTHROPIC_API_KEY=sk-ant-...
-GEMINI_API_KEY=AIza...  # For image generation
+# AI (Anvil Serving router - self-hosted, OpenAI-compatible)
+ANVIL_ROUTER_BASE_URL=https://fakoli-dark.tail4378d.ts.net/v1
+ANVIL_ROUTER_TOKEN=your-router-token
+ANVIL_MODEL=llm.primary            # text generation route
+ANVIL_VISION_MODEL=vision.general  # image/vision route
 
 # Storage
 STORAGE_BACKEND=json    # or sqlite, supabase
@@ -83,7 +105,8 @@ MAILGUN_API_KEY=...
 MAILGUN_DOMAIN=...
 ```
 
-Users can also provide their own API keys via the Settings page.
+The router credential is server-side only. Users do not provide provider API
+keys; the Settings page reports whether the shared Anvil connection is healthy.
 
 ## Project Structure
 
@@ -120,7 +143,7 @@ Base URL: `/api/v1` | **74+ total endpoints**
 | `/paths` | 9 | Learning path management |
 | `/generate` | 5 | AI content generation |
 | `/admin` | 4 | User management (admin only) |
-| `/settings` | 4 | User API key management |
+| `/auth/ai-connection` | 1 | Shared Anvil router health |
 | `/decks` | 8 | Flashcard CRUD |
 | `/reviews` | 3 | Spaced repetition tracking |
 | `/quiz` | 3 | Quiz generation/submission |

@@ -52,9 +52,11 @@ TWILIO_ACCOUNT_SID=your-sid
 TWILIO_AUTH_TOKEN=your-token
 TWILIO_PHONE_NUMBER=+1234567890
 
-# AI
-AI_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your-key
+# AI (Anvil Serving router)
+ANVIL_ROUTER_BASE_URL=https://fakoli-dark.tail4378d.ts.net/v1
+ANVIL_ROUTER_TOKEN=your-router-token
+ANVIL_MODEL=llm.primary
+ANVIL_VISION_MODEL=vision.general
 ```
 
 ---

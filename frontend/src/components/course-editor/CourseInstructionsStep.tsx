@@ -29,7 +29,7 @@ export function CourseInstructionsStep({
             <p className="font-medium text-amber-800">AI Instructions</p>
             <p className="text-sm text-amber-700 mt-1">
               These instructions guide AI generation for all modules. Think of this like a
-              Claude project system prompt.
+              system prompt for the model.
             </p>
           </div>
         </div>
