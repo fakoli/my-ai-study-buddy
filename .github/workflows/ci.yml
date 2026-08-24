@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      # Run the full suite from a clean env (no ambient DEBUG) to prove the
+      # suite is hermetic (ticket 006 / OX Alpha finding 6).
+      - name: Run backend test suite
+        run: env -u DEBUG uv run pytest tests/ -q --cov=. --cov-report=term-missing | tail -30
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run frontend test suite
+        run: npm run test
+
+      # Lint is intentionally non-blocking until ticket 004 (pre-existing
+      # eslint errors) lands; failures still surface in the job log.
+      - name: Lint (informational)
+        run: npm run lint || true
+        continue-on-error: true

@@ -40,7 +40,11 @@ export function useAuth() {
 
     try {
       const user = await authApi.me();
-      setState({ user, isLoading: false, isAuthenticated: true });
+      // Only mark authenticated if the token is still the one we verified.
+      // A concurrent login may have replaced it (and set its own state).
+      if (localStorage.getItem(TOKEN_KEY) === currentToken) {
+        setState({ user, isLoading: false, isAuthenticated: true });
+      }
     } catch {
       // Only clear the token if it is still the one we verified. If a
       // concurrent login replaced it in the meantime, leave the new token
@@ -48,8 +52,8 @@ export function useAuth() {
       const latest = localStorage.getItem(TOKEN_KEY);
       if (latest === currentToken) {
         localStorage.removeItem(TOKEN_KEY);
+        setState({ user: null, isLoading: false, isAuthenticated: false });
       }
-      setState({ user: null, isLoading: false, isAuthenticated: false });
     }
   }, []);
 
