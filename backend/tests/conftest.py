@@ -1,5 +1,12 @@
+import os
 import shutil
 import tempfile
+
+# Ensure the app is importable during test collection on a clean checkout:
+# the Settings validator rejects the default JWT_SECRET when DEBUG is unset,
+# which would fail at `from main import app` below. Set DEBUG=true before
+# any app import (a real value is also set per-test in the autouse fixture).
+os.environ.setdefault("DEBUG", "true")
 
 import pytest
 from httpx import ASGITransport, AsyncClient
