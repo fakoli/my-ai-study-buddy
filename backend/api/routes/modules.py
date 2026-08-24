@@ -12,12 +12,17 @@ from models.module import (
 )
 from services.module_service import ModuleService
 from services.image_service import ImageService
+from services.course_service import CourseService
 
 router = APIRouter()
 
 
 def get_module_service(storage: StorageDep) -> ModuleService:
     return ModuleService(storage)
+
+
+def get_course_service(storage: StorageDep) -> CourseService:
+    return CourseService(storage)
 
 
 def get_image_service() -> ImageService:
@@ -39,10 +44,18 @@ class BatchModuleCreateRequest(BaseModel):
 @router.get("/{course_id}/modules", response_model=list[ModuleSummary])
 async def list_modules(
     course_id: str,
-    module_service: ModuleService = Depends(get_module_service),
+    user: OptionalUser,
+    course_service: CourseService = Depends(get_course_service),
 ):
-    """List all modules for a course."""
-    return await module_service.list_modules(course_id)
+    """List all modules for a course (visibility-enforced).
+
+    Anonymous callers may list modules only for public courses; private
+    courses are visible only to their author. (Previously this endpoint
+    had no ownership check and leaked module metadata for any course.)
+    """
+    user_id = user.id if user else None
+    _course, modules = await course_service.get_course_with_modules(course_id, user_id)
+    return modules
 
 
 @router.post("/{course_id}/modules", response_model=Module)

@@ -169,16 +169,24 @@ class TestValidationErrors:
 
     @pytest.mark.asyncio
     async def test_review_invalid_difficulty(self, client, auth_headers, course_with_modules):
-        """Test that invalid difficulty values are rejected."""
+        """Test that invalid rating enum values are rejected.
+
+        Uses the real request schema (flashcard_index + rating) so this
+        actually exercises the rating enum validation, not a generic 422
+        from missing required fields.
+        """
         course_id = course_with_modules["course"]["id"]
         module_id = course_with_modules["modules"][0]["id"]
-        card_id = course_with_modules["modules"][0]["flashcards"][0]["id"]
         response = await client.post(
             f"/api/v1/courses/{course_id}/modules/{module_id}/flashcards/rate",
-            json={"card_id": card_id, "difficulty": "impossible"},
+            json={"flashcard_index": 0, "rating": "impossible"},
             headers=auth_headers,
         )
         assert response.status_code == 422
+        body = response.json()
+        assert any(
+            "rating" in str(item.get("loc", [])) for item in body.get("detail", [])
+        )
 
 
 class TestResourceNotFound:

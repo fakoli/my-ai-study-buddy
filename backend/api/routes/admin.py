@@ -3,6 +3,10 @@
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
+from logging_config import get_logger
+
+logger = get_logger(__name__)
+
 from dependencies import AdminUser, StorageDep
 from models.token_transaction import (
     AdjustTokensRequest,
@@ -104,8 +108,17 @@ async def adjust_user_tokens(
     except StudyBuddyException:
         raise
     except Exception as e:
+        # Never embed the raw exception message in the response — it can
+        # leak server paths / internals (see the "never leak" contract in
+        # main.py's generic handler). Log it server-side only.
+        logger.error(
+            "Token adjustment failed",
+            user_id=user_id,
+            error=type(e).__name__,
+            error_message=str(e),
+        )
         raise StudyBuddyException(
-            f"Token adjustment failed: {e}",
+            "Token adjustment failed",
             status_code=500,
             code=ErrorCode.INTERNAL_ERROR,
         ) from e

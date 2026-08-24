@@ -1,6 +1,6 @@
 # 007 — Backend service-layer coverage gaps (53% overall; core domain <25%)
 
-Status: open · Severity: high · Area: `backend/tests/`
+Status: **resolved 2026-08-24 (PR #19)** · Severity: high · Area: `backend/tests/`
 
 Coverage baseline from `uv run pytest tests/ --cov=. --cov-report=term-missing -q`:
 **52.7% (2,338/4,435 stmts)**. Models are all at 100%; the gap is entirely in services and some

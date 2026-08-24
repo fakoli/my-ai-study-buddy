@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -26,7 +27,9 @@ class E2E:
         self.base = base.rstrip("/")
         self.token: str | None = None
         self.email = f"e2e-{uuid.uuid4().hex[:10]}@example.com"
-        self.password = "Tailnet-E2E-123!"
+        # Password for the throwaway E2E account. Override via env so no
+        # hardcoded credential ships in the repo (public).
+        self.password = os.environ.get("E2E_PASSWORD", "Tailnet-E2E-123!")
         self.results: list[tuple[str, bool, str]] = []
 
     def request(

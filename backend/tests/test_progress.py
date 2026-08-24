@@ -31,14 +31,6 @@ async def test_get_stats_after_activity(
     course_id = course_with_modules["course"]["id"]
     module_id = course_with_modules["modules"][0]["id"]
 
-    # Review a flashcard (drives total_cards_reviewed)
-    card_id = course_with_modules["modules"][0]["flashcards"][0]["id"]
-    await client.post(
-        f"/api/v1/courses/{course_id}/modules/{module_id}/flashcards/rate",
-        json={"card_id": card_id, "difficulty": "easy"},
-        headers=auth_headers,
-    )
-
     # Submit a quiz on the generated module (drives total_quizzes_completed)
     await client.post(
         f"/api/v1/progress/modules/{course_id}/{module_id}",

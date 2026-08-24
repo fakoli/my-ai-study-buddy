@@ -77,13 +77,10 @@ async def request_logging_middleware(request: Request, call_next):
             duration_ms=round(duration_ms, 2),
             error=str(e),
         )
-        # Re-raise WITHOUT the response being swallowed: by the time this
-        # except runs, a registered exception handler has already converted
-        # the error into a 500 response (via Starlette's ServerErrorMiddleware)
-        # — but that response is out of band of `call_next`. Re-raising here
-        # lets the outer middleware/exception machinery deliver that 500,
-        # rather than letting a raw transport exception escape to the client
-        # (see .tickets/003, .tickets/002).
+        # Re-raise so the outer ServerErrorMiddleware (which owns the
+        # exception handlers) can convert this into a proper 500 response.
+        # We must NOT swallow it here: a response built inside this
+        # middleware's except would short-circuit the error contract.
         raise e
 
 
@@ -173,6 +170,19 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "app": settings.app_name}
+
+
+@app.get("/__force_500")
+async def force_500():
+    """Test-only route that raises, to exercise the generic exception handler.
+
+    Registered only when DEBUG is true (never in production).
+    """
+    if not settings.debug:  # pragma: no cover - prod guard
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Not found")
+    raise RuntimeError("Forced 500 for exception-handler test")
 
 
 # Import and register routers

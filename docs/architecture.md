@@ -485,7 +485,7 @@ class Settings(BaseSettings):
     anvil_router_base_url: str | None = None  # e.g. https://fakoli-dark.tail4378d.ts.net/v1
     anvil_router_token: str | None = None
     anvil_model: str = "llm.primary"          # text generation route
-    anvil_vision_model: str = "vision.general"  # image/vision route
+    anvil_image_model: str = "gemini-nano-banana"  # image generation (Gemini nano banana, only image model right now)
 ```
 
 All AI text and image generation routes through a single self-hosted Anvil

@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     anvil_router_base_url: str | None = None  # e.g. https://fakoli-dark.tail4378d.ts.net/v1
     anvil_router_token: str | None = None
     anvil_model: str = "llm.primary"
+    # Image generation model. We don't have a good open image model on the
+    # fleet yet, so this points at the Gemini nano banana route for now
+    # (OpenAI-compatible multimodal tier via the router).
+    anvil_image_model: str = "gemini-nano-banana"
 
     # CORS
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]

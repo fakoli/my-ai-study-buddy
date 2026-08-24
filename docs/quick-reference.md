@@ -137,6 +137,6 @@ self-hosted **Anvil Serving router** (OpenAI-compatible). No per-user API keys.
 | Route | Feature | Config |
 |-------|---------|--------|
 | `llm.primary` | Text generation | `ANVIL_MODEL` |
-| `vision.general` | Image/vision generation | `ANVIL_VISION_MODEL` |
+| `gemini-nano-banana` | Image generation (Gemini nano banana; only image model right now) | `ANVIL_IMAGE_MODEL` |
 
 Users can verify the router connection via `/settings` (AI Assistant card).
