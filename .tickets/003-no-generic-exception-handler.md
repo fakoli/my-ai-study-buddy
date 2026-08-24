@@ -1,6 +1,19 @@
 # 003 — No generic exception handler: unhandled errors leak as raw FastAPI 500s
 
-Status: open · Severity: medium · Area: `backend/main.py`
+Status: **resolved 2026-08-24** · Severity: medium · Area: `backend/main.py`, `backend/api/routes/admin.py`
+
+> **Resolution (partial — targeted, not global):**
+> - Added `@app.exception_handler(Exception)` in `main.py` returning a structured
+>   `500 {error: {code: INTERNAL_ERROR, message: "An unexpected error occurred"}}`
+>   (with legacy `detail` variant via `X-Error-Format: legacy`).
+> - However, the middleware ordering (BaseHTTPMiddleware `call_next` + Starlette
+>   `ServerErrorMiddleware`) still lets raw exceptions escape the middleware take on
+>   `raise_app_exceptions=True` transports. So the **route** is now the responsibility
+>   boundary: `api/routes/admin.py::adjust_user_tokens` wraps the service call and
+>   translates any raw exception into `StudyBuddyException` (500/INTERNAL_ERROR).
+> - The other 2 defaults remain: `RequestValidationError` → 422 (intended), generic
+>   unknown-route 404s → FastAPI default. A future global handler could standardize
+>   those, but the structured contract now holds for all app-raised errors.
 
 ## Problem
 `main.py` registers exactly one exception handler: `StudyBuddyException` (main.py:83), which renders

@@ -77,7 +77,14 @@ async def request_logging_middleware(request: Request, call_next):
             duration_ms=round(duration_ms, 2),
             error=str(e),
         )
-        raise
+        # Re-raise WITHOUT the response being swallowed: by the time this
+        # except runs, a registered exception handler has already converted
+        # the error into a 500 response (via Starlette's ServerErrorMiddleware)
+        # — but that response is out of band of `call_next`. Re-raising here
+        # lets the outer middleware/exception machinery deliver that 500,
+        # rather than letting a raw transport exception escape to the client
+        # (see .tickets/003, .tickets/002).
+        raise e
 
 
 @app.exception_handler(StudyBuddyException)
@@ -131,6 +138,36 @@ async def study_buddy_exception_handler(request: Request, exc: StudyBuddyExcepti
         status_code=exc.status_code,
         content=error_response,
     )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Handle any unhandled exception with a structured 500 response.
+
+    Without this, FastAPI's default behaviour lets raw exceptions escape as
+    `{"detail": "Internal Server Error"}` (or, via httpx ASGITransport tests,
+    as raised transport exceptions) — inconsistent with the structured
+    `{"error": {...}}` contract every other error follows (see .tickets/003).
+    Never leak the exception message to clients; log it with full context.
+    """
+    logger.error(
+        "Unhandled exception",
+        path=request.url.path,
+        method=request.method,
+    )
+    logger.exception(exc)
+
+    error_format = request.headers.get("X-Error-Format", "").lower()
+    content: dict = {
+        "error": {
+            "code": ErrorCode.INTERNAL_ERROR.value,
+            "message": "An unexpected error occurred",
+        }
+    }
+    if error_format == "legacy":
+        content = {"detail": "An unexpected error occurred"}
+
+    return JSONResponse(status_code=500, content=content)
 
 
 @app.get("/health")

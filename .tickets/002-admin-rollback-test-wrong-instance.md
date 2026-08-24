@@ -1,6 +1,12 @@
 # 002 — Admin rollback test patches a storage instance the app never uses
 
-Status: open · Severity: medium · Area: `backend/tests/test_admin.py`, `backend/tests/conftest.py`
+Status: **resolved 2026-08-24** · Severity: medium · Area: `backend/tests/test_admin.py`, `backend/tests/conftest.py`
+
+> **Resolution:** The test now patches the **singleton** the app actually uses
+> (`from storage import get_storage_backend; backend = get_storage_backend(get_settings())`)
+> instead of the fixture's fresh `JSONStorage`, and asserts `create_call_count >= 1`
+> so the failure path is provably exercised. Combined with ticket 003's route-level
+> translation, the test passes: 500, balance restored, no transaction row.
 
 ## Symptom
 `tests/test_admin.py::test_adjust_tokens_rollback_on_transaction_failure` fails:

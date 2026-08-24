@@ -11,9 +11,9 @@ Each ticket is self-contained enough for another agent to pick up and fix withou
 
 | Ticket | Area | Severity | Status |
 |--------|------|----------|--------|
-| [001](001-stale-deck-domain-tests.md) | backend/tests | high | open |
-| [002](002-admin-rollback-test-wrong-instance.md) | backend/tests + main.py | medium | open |
-| [003](003-no-generic-exception-handler.md) | backend/main.py | medium | open |
+| [001](001-stale-deck-domain-tests.md) | backend/tests | high | **resolved 2026-08-24** |
+| [002](002-admin-rollback-test-wrong-instance.md) | backend/tests + main.py | medium | **resolved 2026-08-24** |
+| [003](003-no-generic-exception-handler.md) | backend/main.py | medium | **resolved 2026-08-24** (targeted) |
 | [004](004-backend-lint-findings.md) | backend | low | open |
 | [005](005-frontend-eslint-findings.md) | frontend | medium | open (005a resolved 2026-08-23; 005b-e remain) |
 | [006](006-no-frontend-test-infrastructure.md) | frontend | high | open |

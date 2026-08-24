@@ -85,10 +85,27 @@ async def adjust_user_tokens(
     admin: AdminUser,
     admin_service: AdminService = Depends(get_admin_service),
 ) -> AdjustTokensResponse:
-    """Adjust a user's token balance."""
-    return await admin_service.adjust_tokens(
-        user_id=user_id,
-        amount=request.amount,
-        reason=request.reason,
-        admin_id=admin.id,
-    )
+    """Adjust a user's token balance.
+
+    The service deliberately re-raises raw exceptions after a rollback
+    (see services/admin_service.py:184). Translate those into a
+    StudyBuddyException so the structured 500 error contract is preserved
+    (see .tickets/003) instead of a raw exception escaping the route.
+    """
+    from exceptions import ErrorCode, StudyBuddyException
+
+    try:
+        return await admin_service.adjust_tokens(
+            user_id=user_id,
+            amount=request.amount,
+            reason=request.reason,
+            admin_id=admin.id,
+        )
+    except StudyBuddyException:
+        raise
+    except Exception as e:
+        raise StudyBuddyException(
+            f"Token adjustment failed: {e}",
+            status_code=500,
+            code=ErrorCode.INTERNAL_ERROR,
+        ) from e

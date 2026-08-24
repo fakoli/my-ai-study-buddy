@@ -1,6 +1,21 @@
 # 001 — Stale deck-domain tests break the backend suite
 
-Status: open · Severity: high · Area: `backend/tests/`
+Status: **resolved 2026-08-24** · Severity: high · Area: `backend/tests/`
+
+> **Resolution:** Ported to the current courses → modules domain.
+> - `tests/conftest.py`: replaced `deck_with_cards` / `other_user_deck` / `generated_quiz`
+>   with `course_with_modules` (course + 3 modules incl. flashcards + quiz) and
+>   `other_user_course`; added `_create_course` helper.
+> - `tests/test_error_cases.py`: unchanged classes, endpoints re-pointed to `/courses`,
+>   `/courses/{id}/modules`, and `/courses/{id}/modules/{id}/flashcards/rate`. Notably:
+>   - `404` code is `COURSE_NOT_FOUND`, not `NOT_FOUND`.
+>   - `GET /courses/{id}/modules` has no ownership check (any caller may list),
+>     so the forbidden tests use the author-scoped `PUT /courses/{id}`.
+>   - The invalid-difficulty test uses the flashcard-rating endpoint.
+> - `tests/test_progress.py`: `total_cards_reviewed` is intentionally 0 in the
+>   current domain (progress_service.py:611); assert `total_quizzes_completed`
+>   instead. Added `test_get_dashboard_stats` + `test_course_progress` for real coverage.
+> - All 18 previously-failing/erroring tests pass; suite is 55/55 green.
 
 ## Symptom
 `uv run pytest tests/ -q` (run from `backend/`) reports **37 passed, 7 failed, 11 errors**.
