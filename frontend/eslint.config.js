@@ -20,4 +20,12 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Test files: react-refresh "only export components" applies to HMR for
+    // app code, not to vitest specs. Disable it for specs.
+    files: ['**/*.test.{ts,tsx}', '**/test/**'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

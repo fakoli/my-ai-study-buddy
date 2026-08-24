@@ -1,6 +1,6 @@
 # 006 — Frontend has zero test infrastructure (and docs claim otherwise)
 
-Status: open · Severity: high · Area: `frontend/`
+Status: **resolved 2026-08-24** · Severity: high · Area: `frontend/`
 
 ## Problem
 - No `test` script in `package.json`; no vitest/jest/RTL/playwright dependencies; no `test` block in

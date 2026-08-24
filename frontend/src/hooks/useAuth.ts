@@ -40,7 +40,11 @@ export function useAuth() {
 
     try {
       const user = await authApi.me();
-      setState({ user, isLoading: false, isAuthenticated: true });
+      // Only mark authenticated if the token is still the one we verified.
+      // A concurrent login may have replaced it (and set its own state).
+      if (localStorage.getItem(TOKEN_KEY) === currentToken) {
+        setState({ user, isLoading: false, isAuthenticated: true });
+      }
     } catch {
       // Only clear the token if it is still the one we verified. If a
       // concurrent login replaced it in the meantime, leave the new token
@@ -48,8 +52,15 @@ export function useAuth() {
       const latest = localStorage.getItem(TOKEN_KEY);
       if (latest === currentToken) {
         localStorage.removeItem(TOKEN_KEY);
+        // Always settle isLoading, even if a concurrent login is mid-flight
+        // (its own me() will set state when it resolves). Use a functional
+        // update so we never clobber a state another call already set.
+        setState((s) =>
+          s.isAuthenticated
+            ? s
+            : { user: null, isLoading: false, isAuthenticated: false }
+        );
       }
-      setState({ user: null, isLoading: false, isAuthenticated: false });
     }
   }, []);
 
@@ -70,13 +81,35 @@ export function useAuth() {
   const login = async (credentials: UserLogin) => {
     const response = await authApi.login(credentials);
     localStorage.setItem(TOKEN_KEY, response.access_token);
+    const ourToken = response.access_token;
     // Set state directly from the verified token; do not round-trip through
     // checkAuth here so a stale concurrent call cannot race us.
     try {
       const user = await authApi.me();
-      setState({ user, isLoading: false, isAuthenticated: true });
+      // Only claim authenticated if our token is still current. If a
+      // concurrent logout or another login replaced/removed it, do not
+      // resurrect a dead session (logout-resurrection race) or overwrite
+      // the newer session's user (concurrent-login mismatch).
+      if (localStorage.getItem(TOKEN_KEY) === ourToken) {
+        setState({ user, isLoading: false, isAuthenticated: true });
+      } else if (!localStorage.getItem(TOKEN_KEY)) {
+        // Our token was removed by a concurrent logout: settle loading.
+        setState({ user: null, isLoading: false, isAuthenticated: false });
+      }
     } catch {
-      localStorage.removeItem(TOKEN_KEY);
+      // Only remove the token if it is still ours (a concurrent logout may
+      // have already removed it; a concurrent login may have replaced it).
+      if (localStorage.getItem(TOKEN_KEY) === ourToken) {
+        localStorage.removeItem(TOKEN_KEY);
+      }
+      // Sign out only if no other session is live: a concurrent login that
+      // completed while our me() was failing left a valid token + state, and
+      // our failure must not paint signed-out over it (OX Alpha #9).
+      setState((s) =>
+        localStorage.getItem(TOKEN_KEY) === null
+          ? { user: null, isLoading: false, isAuthenticated: false }
+          : s
+      );
       throw new Error('Login failed');
     }
   };
