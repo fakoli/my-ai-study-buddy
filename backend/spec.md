@@ -96,7 +96,7 @@ This document defines the architectural decisions, constraints, and patterns for
 - **python-jose:** JWT handling
 - **bcrypt:** Password hashing
 - **aiofiles:** Async file operations
-- **anthropic:** AI service integration (optional)
+- **httpx:** Anvil router client (OpenAI-compatible)
 
 ### Storage Backends
 
@@ -303,7 +303,10 @@ async def create_resource(
 | `STORAGE_PATH` | No | `./data` | Storage path |
 | `JWT_SECRET` | Prod | - | JWT signing secret |
 | `JWT_EXPIRATION_HOURS` | No | `24` | Token expiry |
-| `ANTHROPIC_API_KEY` | No | - | AI service key |
+| `ANVIL_ROUTER_BASE_URL` | No | - | Anvil router base URL (e.g. https://fakoli-dark.tail4378d.ts.net/v1) |
+| `ANVIL_ROUTER_TOKEN` | Prod | - | Bearer token for the Anvil router |
+| `ANVIL_MODEL` | No | `llm.primary` | Route/model id for text generation |
+| `ANVIL_VISION_MODEL` | No | `vision.general` | Route id for image generation |
 
 ### Production Checklist
 

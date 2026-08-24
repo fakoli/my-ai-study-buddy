@@ -477,19 +477,19 @@ class TokenTransaction(BaseModel):
     created_at: datetime
 ```
 
-### User API Settings
+### AI Connection (Anvil Router)
 
 ```python
-class UserAPISettings(BaseModel):
-    id: str
-    user_id: str
-    provider: Literal["anthropic", "gemini"]
-    encrypted_api_key: str
-    key_hint: str  # Last 4 characters
-    is_valid: bool = True
-    created_at: datetime
-    updated_at: datetime
+class Settings(BaseSettings):
+    # ...
+    anvil_router_base_url: str | None = None  # e.g. https://fakoli-dark.tail4378d.ts.net/v1
+    anvil_router_token: str | None = None
+    anvil_model: str = "llm.primary"          # text generation route
+    anvil_vision_model: str = "vision.general"  # image/vision route
 ```
+
+All AI text and image generation routes through a single self-hosted Anvil
+Serving router (OpenAI-compatible `/v1/chat/completions`). No per-user API keys.
 
 ---
 

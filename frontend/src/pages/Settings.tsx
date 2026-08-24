@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { useNotificationPreferences, useUpdateNotificationPreferences, useTestEmail, useTestSms } from '../hooks/useNotifications';
-import { useApiKeys, useSetApiKey, useDeleteApiKey, useValidateApiKey } from '../hooks/useUserSettings';
-import type { APIProvider } from '../types';
+import { useAIConnection } from '../hooks/useUserSettings';
 
 export function Settings() {
   const { user, logout } = useAuthContext();
@@ -14,18 +13,12 @@ export function Settings() {
   const testEmail = useTestEmail();
   const testSms = useTestSms();
 
-  // API Keys
-  const { data: apiKeys, isLoading: keysLoading } = useApiKeys();
-  const setApiKey = useSetApiKey();
-  const deleteApiKey = useDeleteApiKey();
-  const validateApiKey = useValidateApiKey();
+  // Anvil AI connection status (server-side router)
+  const { data: aiConnection, isLoading: aiLoading } = useAIConnection();
 
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [newApiKey, setNewApiKey] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<APIProvider>('anthropic');
-  const [validationMessage, setValidationMessage] = useState<{ provider: string; message: string; success: boolean } | null>(null);
 
-  const isLoading = prefsLoading || keysLoading;
+  const isLoading = prefsLoading || aiLoading;
 
   if (isLoading) {
     return (
@@ -35,42 +28,11 @@ export function Settings() {
     );
   }
 
-  const handleSetApiKey = async () => {
-    if (!newApiKey) return;
-    try {
-      await setApiKey.mutateAsync({ provider: selectedProvider, api_key: newApiKey });
-      setNewApiKey('');
-      setValidationMessage({ provider: selectedProvider, message: 'API key saved successfully', success: true });
-    } catch {
-      setValidationMessage({ provider: selectedProvider, message: 'Failed to save API key', success: false });
-    }
-  };
-
-  const handleValidateKey = async (provider: APIProvider) => {
-    try {
-      const result = await validateApiKey.mutateAsync(provider);
-      setValidationMessage({
-        provider,
-        message: result.message,
-        success: result.is_valid,
-      });
-    } catch {
-      setValidationMessage({ provider, message: 'Validation failed', success: false });
-    }
-  };
-
-  const handleDeleteKey = async (provider: APIProvider) => {
-    try {
-      await deleteApiKey.mutateAsync(provider);
-      setValidationMessage({ provider, message: 'API key deleted', success: true });
-    } catch {
-      setValidationMessage({ provider, message: 'Failed to delete API key', success: false });
-    }
-  };
-
-  const getKeyForProvider = (provider: APIProvider) => {
-    return apiKeys?.find((k) => k.provider === provider);
-  };
+  const aiStatus = aiConnection
+    ? aiConnection.is_configured && aiConnection.is_reachable
+      ? { label: 'Connected', ok: true }
+      : { label: aiConnection.is_configured ? 'Unreachable' : 'Not configured', ok: false }
+    : { label: 'Unknown', ok: false };
 
   return (
     <div className="space-y-6">
@@ -98,152 +60,32 @@ export function Settings() {
 
       <Card>
         <CardHeader>
-          <h3 className="font-medium text-gray-900">API Keys</h3>
+          <h3 className="font-medium text-gray-900">AI Assistant</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Provide your own API keys to use AI features. Your keys are encrypted before storage.
+            AI features run on a shared self-hosted router. No API keys required.
           </p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Validation message */}
-          {validationMessage && (
-            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${validationMessage.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-              {validationMessage.message}
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-semibold text-gray-900">Anvil Router</p>
+              <p className="text-sm text-gray-600">
+                {aiConnection?.model ? `Model: ${aiConnection.model}` : 'AI content generation'}
+              </p>
+            </div>
+            <span
+              className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                aiStatus.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}
+            >
+              {aiStatus.label}
+            </span>
+          </div>
+          {!aiStatus.ok && aiConnection?.message && (
+            <div className="p-3 rounded-lg text-sm bg-red-50 text-red-800">
+              {aiConnection.message}
             </div>
           )}
-
-          {/* Anthropic Key */}
-          <div className="p-4 bg-gray-50 rounded-lg space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-semibold text-gray-900">Anthropic (Claude)</p>
-                <p className="text-sm text-gray-600">Used for AI-powered content generation</p>
-              </div>
-              {getKeyForProvider('anthropic') && (
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getKeyForProvider('anthropic')?.is_valid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {getKeyForProvider('anthropic')?.is_valid ? 'Valid' : 'Invalid'}
-                </span>
-              )}
-            </div>
-            {getKeyForProvider('anthropic') ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
-                  <span className="text-sm text-gray-500">Current key:</span>
-                  <code className="flex-1 text-sm font-mono text-gray-700">
-                    ••••••••{getKeyForProvider('anthropic')?.key_hint}
-                  </code>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleValidateKey('anthropic')}
-                    isLoading={validateApiKey.isPending}
-                  >
-                    Validate
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDeleteKey('anthropic')}
-                    isLoading={deleteApiKey.isPending}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <Input
-                  id="anthropic-key"
-                  type="password"
-                  placeholder="sk-ant-api03-..."
-                  value={selectedProvider === 'anthropic' ? newApiKey : ''}
-                  onChange={(e) => {
-                    setSelectedProvider('anthropic');
-                    setNewApiKey(e.target.value);
-                  }}
-                />
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setSelectedProvider('anthropic');
-                    handleSetApiKey();
-                  }}
-                  isLoading={setApiKey.isPending && selectedProvider === 'anthropic'}
-                  disabled={selectedProvider !== 'anthropic' || !newApiKey}
-                >
-                  Save API Key
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Gemini Key */}
-          <div className="p-4 bg-gray-50 rounded-lg space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-semibold text-gray-900">Google Gemini</p>
-                <p className="text-sm text-gray-600">Used for AI-powered image generation</p>
-              </div>
-              {getKeyForProvider('gemini') && (
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getKeyForProvider('gemini')?.is_valid ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {getKeyForProvider('gemini')?.is_valid ? 'Valid' : 'Invalid'}
-                </span>
-              )}
-            </div>
-            {getKeyForProvider('gemini') ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 p-3 bg-white rounded-lg border border-gray-200">
-                  <span className="text-sm text-gray-500">Current key:</span>
-                  <code className="flex-1 text-sm font-mono text-gray-700">
-                    ••••••••{getKeyForProvider('gemini')?.key_hint}
-                  </code>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleValidateKey('gemini')}
-                    isLoading={validateApiKey.isPending}
-                  >
-                    Validate
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDeleteKey('gemini')}
-                    isLoading={deleteApiKey.isPending}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <Input
-                  id="gemini-key"
-                  type="password"
-                  placeholder="AIza..."
-                  value={selectedProvider === 'gemini' ? newApiKey : ''}
-                  onChange={(e) => {
-                    setSelectedProvider('gemini');
-                    setNewApiKey(e.target.value);
-                  }}
-                />
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setSelectedProvider('gemini');
-                    handleSetApiKey();
-                  }}
-                  isLoading={setApiKey.isPending && selectedProvider === 'gemini'}
-                  disabled={selectedProvider !== 'gemini' || !newApiKey}
-                >
-                  Save API Key
-                </Button>
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
 

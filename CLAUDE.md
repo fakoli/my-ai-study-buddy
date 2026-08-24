@@ -10,7 +10,7 @@ A learning platform for visual learners who learn by doing. Combines flashcards,
 - **Content**: Markdown files
 - **Persistence**: JSON (local), SQLite/Supabase (production)
 - **Notifications**: Mailgun (email), SMS provider TBD
-- **AI**: Claude API (text generation), Gemini via nano-banana-pro (image generation)
+- **AI**: Anvil Serving router (self-hosted, OpenAI-compatible) for text and image generation
 
 ## Documentation
 
@@ -25,7 +25,7 @@ Read these files when working on related areas. They contain API specifications,
 # Backend
 cd backend
 uv sync
-uv run uvicorn main:app --reload --port 8000
+uv run uvicorn main:app --reload --port 8010
 
 # Frontend
 cd frontend

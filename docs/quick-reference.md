@@ -131,9 +131,12 @@ course_ids[], visibility, estimated_hours
 
 ## AI Provider Support
 
-| Provider | Feature | Config |
-|----------|---------|--------|
-| Anthropic | Text generation | `ANTHROPIC_API_KEY` |
-| Gemini | Image generation | `GEMINI_API_KEY` |
+All AI features (text generation, image generation) route through a single
+self-hosted **Anvil Serving router** (OpenAI-compatible). No per-user API keys.
 
-Users can store their own keys via `/settings/api-keys`.
+| Route | Feature | Config |
+|-------|---------|--------|
+| `llm.primary` | Text generation | `ANVIL_MODEL` |
+| `vision.general` | Image/vision generation | `ANVIL_VISION_MODEL` |
+
+Users can verify the router connection via `/settings` (AI Assistant card).
