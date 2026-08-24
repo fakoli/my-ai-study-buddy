@@ -67,6 +67,7 @@ data/
 *.sqlite3
 
 # Temporary
+.run/
 tmp/
 temp/
 *.tmp
@@ -97,3 +98,4 @@ backend/.pytest_cache/
 .claude/settings.local.json
 */CLAUDE.md
 !CLAUDE.md
+graphify-out/

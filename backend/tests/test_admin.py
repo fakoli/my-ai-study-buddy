@@ -1,7 +1,7 @@
 """Tests for admin service and API routes."""
 
 import pytest
-from storage import get_storage
+from dependencies import get_storage
 from models.user import UserRole
 
 

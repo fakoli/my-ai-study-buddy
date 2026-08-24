@@ -5,7 +5,6 @@ from typing import Literal
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 # Define paths for hierarchical .env loading
 PROJECT_ROOT = Path(__file__).parent.parent
 BACKEND_DIR = Path(__file__).parent
@@ -59,10 +58,10 @@ class Settings(BaseSettings):
     twilio_auth_token: str | None = None
     twilio_phone_number: str | None = None
 
-    # AI
-    ai_provider: str = "anthropic"
-    anthropic_api_key: str | None = None
-    gemini_api_key: str | None = None  # For image generation via nano-banana-pro
+    # AI (Anvil Serving router - OpenAI-compatible, self-hosted fleet)
+    anvil_router_base_url: str | None = None  # e.g. https://fakoli-dark.tail4378d.ts.net/v1
+    anvil_router_token: str | None = None
+    anvil_model: str = "llm.primary"
 
     # CORS
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]

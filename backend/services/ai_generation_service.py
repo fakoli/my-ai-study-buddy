@@ -1,7 +1,7 @@
 """AI Generation Service for course content creation.
 
 Generates module structure, content, flashcards, quizzes, and visuals
-using Claude API for text and nano-banana-pro (Gemini) for images.
+using the self-hosted Anvil Serving router (OpenAI-compatible) for text.
 
 Optimizations:
 - Course context caching (30-min TTL) to reduce redundant context building
@@ -12,9 +12,7 @@ Optimizations:
 import asyncio
 import functools
 import json
-import os
 import re
-import subprocess
 import time
 from pathlib import Path
 from typing import Callable, ParamSpec, TypeVar
@@ -23,7 +21,6 @@ from uuid import uuid4
 from config import Settings
 from exceptions import AIServiceException, ErrorCode, InsufficientTokensException, NotFoundException
 from logging_config import clear_operation_context, get_logger, set_operation_context
-
 
 logger = get_logger(__name__)
 
@@ -116,13 +113,11 @@ from models.ai_generation import (
 )
 from models.course import Course
 from models.module import FlashcardData, Module, QuizData, QuizQuestionData
-from services.ai_model_router import get_model_router
+from services.anvil_client import get_anvil_client
 from services.auth_service import AuthService
 from services.base_service import BaseService
 from services.request_deduplication import get_request_deduplicator
-from services.user_api_settings_service import UserAPISettingsService
 from storage.base import StorageBackend
-
 
 # Token costs for each operation
 TOKEN_COSTS = {
@@ -137,12 +132,12 @@ TOKEN_COSTS = {
 class AIGenerationService(BaseService):
     """Generates course content using AI.
 
-    Uses Claude API for text generation and nano-banana-pro (Gemini) for images.
+    Uses the self-hosted Anvil Serving router (OpenAI-compatible) for text
+    generation. No external API keys are required.
 
     Optimizations:
     - Course context caching (30-min TTL) to reduce redundant context building
     - Request deduplication for concurrent identical requests
-    - Model routing to use appropriate models for different task complexities
     """
 
     # Course context cache TTL (30 minutes)
@@ -160,11 +155,9 @@ class AIGenerationService(BaseService):
         self.content_path = Path(content_path)
         self.uploads_path = Path(uploads_path)
         self.auth_service = AuthService(storage, settings)
-        self.user_api_settings_service = UserAPISettingsService(storage, settings)
 
         # Course context cache: course_id -> (context_string, expiry_time)
         self._course_context_cache: dict[str, tuple[str, float]] = {}
-        self._model_router = get_model_router()
         self._deduplicator = get_request_deduplicator()
 
     async def _check_token_balance(self, user_id: str, amount: int) -> None:
@@ -179,142 +172,49 @@ class AIGenerationService(BaseService):
         """Consume tokens after successful AI operation."""
         await self.auth_service.consume_tokens(user_id, amount)
 
-    async def _get_anthropic_key(self, user_id: str) -> tuple[str | None, str]:
-        """Get the Anthropic API key to use for a user.
-
-        Tries user's key first, then falls back to system key.
-
-        Args:
-            user_id: ID of the user making the request
-
-        Returns:
-            Tuple of (api_key, key_source) where key_source is "user" or "system"
-
-        Note:
-            Returns (None, "system") if no key is available.
-        """
-        # Try user's key first
-        user_key = await self.user_api_settings_service.get_decrypted_key(
-            user_id, "anthropic"
-        )
-        if user_key:
-            logger.debug(f"Using user-provided Anthropic API key", user_id=user_id)
-            return user_key, "user"
-
-        # Fall back to system key
-        system_key = self.settings.anthropic_api_key
-        if system_key:
-            logger.debug(f"Using system Anthropic API key", user_id=user_id)
-            return system_key, "system"
-
-        return None, "system"
-
-    async def _call_claude(
+    async def _call_llm(
         self,
         prompt: str,
         system_prompt: str,
         max_tokens: int = 4096,
-        api_key: str | None = None,
-        key_source: str = "system",
     ) -> str:
-        """Call Claude API for text generation.
+        """Call the Anvil router for text generation.
 
         Args:
             prompt: The user prompt to send
             system_prompt: The system prompt for context
             max_tokens: Maximum tokens in response
-            api_key: Optional API key (defaults to system key)
-            key_source: Source of the API key for logging ("system" or "user")
 
         Raises:
-            AIServiceException: If API key is not configured or API call fails.
+            AIServiceException: If the router is not configured or the call fails.
         """
-        effective_key = api_key or self.settings.anthropic_api_key
-        if not effective_key:
-            logger.error(
-                "AI service not configured: missing API key",
-                key_source=key_source,
-            )
+        client = get_anvil_client(self.settings)
+        if not client.is_configured:
+            logger.error("AI service not configured: missing Anvil router settings")
             raise AIServiceException(
-                "AI service not configured: missing API key",
+                "AI service not configured: ANVIL_ROUTER_BASE_URL and "
+                "ANVIL_ROUTER_TOKEN required",
                 code=ErrorCode.AI_SERVICE_UNAVAILABLE,
             )
 
-        model = "claude-sonnet-4-20250514"
+        model = self.settings.anvil_model
         prompt_length = len(prompt)
         system_length = len(system_prompt)
 
         logger.debug(
-            f"Claude API call starting",
+            "Anvil router call starting",
             model=model,
             max_tokens=max_tokens,
             prompt_length=prompt_length,
             system_length=system_length,
-            key_source=key_source,
         )
 
-        start_time = time.perf_counter()
-
-        try:
-            import anthropic
-
-            client = anthropic.Anthropic(api_key=effective_key)
-
-            response = client.messages.create(
-                model=model,
-                max_tokens=max_tokens,
-                system=system_prompt,
-                messages=[{"role": "user", "content": prompt}],
-            )
-
-            duration_ms = (time.perf_counter() - start_time) * 1000
-
-            # Extract token usage from response
-            input_tokens = response.usage.input_tokens
-            output_tokens = response.usage.output_tokens
-
-            logger.info(
-                f"Claude API call completed",
-                model=model,
-                duration_ms=round(duration_ms, 2),
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                key_source=key_source,
-            )
-
-            return response.content[0].text
-
-        except anthropic.APIConnectionError as e:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
-                f"Claude API connection error",
-                error_type="APIConnectionError",
-                error_message=str(e),
-                duration_ms=round(duration_ms, 2),
-                key_source=key_source,
-            )
-            raise AIServiceException(f"Failed to connect to AI service: {e}")
-        except anthropic.RateLimitError as e:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
-                f"Claude API rate limit exceeded",
-                error_type="RateLimitError",
-                error_message=str(e),
-                duration_ms=round(duration_ms, 2),
-                key_source=key_source,
-            )
-            raise AIServiceException(f"AI service rate limit exceeded: {e}")
-        except anthropic.APIStatusError as e:
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            logger.error(
-                f"Claude API status error",
-                error_type="APIStatusError",
-                status_code=e.status_code,
-                error_message=e.message,
-                duration_ms=round(duration_ms, 2),
-                key_source=key_source,
-            )
-            raise AIServiceException(f"AI service error: {e.message}")
+        return await client.complete(
+            prompt,
+            system_prompt=system_prompt,
+            model=model,
+            max_tokens=max_tokens,
+        )
 
     def _build_course_context(self, course: Course) -> str:
         """Build context string from course instructions with caching.
@@ -327,7 +227,7 @@ class AIGenerationService(BaseService):
         if cached:
             context, expiry = cached
             if time.monotonic() < expiry:
-                logger.debug(f"Using cached course context", course_id=course.id)
+                logger.debug("Using cached course context", course_id=course.id)
                 return context
             # Expired, remove from cache
             del self._course_context_cache[course.id]
@@ -354,7 +254,7 @@ LEARNING OBJECTIVES:
         # Cache the context
         expiry = time.monotonic() + self.CONTEXT_CACHE_TTL_SECONDS
         self._course_context_cache[course.id] = (context, expiry)
-        logger.debug(f"Cached course context", course_id=course.id)
+        logger.debug("Cached course context", course_id=course.id)
 
         return context
 
@@ -365,7 +265,7 @@ LEARNING OBJECTIVES:
         """
         if course_id in self._course_context_cache:
             del self._course_context_cache[course_id]
-            logger.debug(f"Invalidated course context cache", course_id=course_id)
+            logger.debug("Invalidated course context cache", course_id=course_id)
 
     async def _get_course(self, course_id: str) -> Course:
         """Get a course by ID from database."""
@@ -443,12 +343,7 @@ Output format:
   ...
 ]"""
 
-        # Get the API key to use
-        api_key, key_source = await self._get_anthropic_key(user_id)
-
-        response = await self._call_claude(
-            prompt, system_prompt, api_key=api_key, key_source=key_source
-        )
+        response = await self._call_llm(prompt, system_prompt)
         await self._consume_tokens(user_id, cost)
 
         # Parse JSON response
@@ -578,11 +473,8 @@ Requirements:
 
 Output the complete JSON object as specified."""
 
-        # Get the API key to use
-        api_key, key_source = await self._get_anthropic_key(user_id)
-
-        response = await self._call_claude(
-            prompt, system_prompt, max_tokens=8192, api_key=api_key, key_source=key_source
+        response = await self._call_llm(
+            prompt, system_prompt, max_tokens=8192
         )
         await self._consume_tokens(user_id, cost)
 
@@ -687,12 +579,7 @@ MODULE CONTENT:
 
 Generate {request.count} high-quality flashcards that cover the key concepts in this module."""
 
-        # Get the API key to use
-        api_key, key_source = await self._get_anthropic_key(user_id)
-
-        response = await self._call_claude(
-            prompt, system_prompt, api_key=api_key, key_source=key_source
-        )
+        response = await self._call_llm(prompt, system_prompt)
         await self._consume_tokens(user_id, cost)
 
         # Parse JSON response
@@ -786,12 +673,7 @@ MODULE CONTENT:
 
 Generate {request.question_count} high-quality multiple-choice questions."""
 
-        # Get the API key to use
-        api_key, key_source = await self._get_anthropic_key(user_id)
-
-        response = await self._call_claude(
-            prompt, system_prompt, api_key=api_key, key_source=key_source
-        )
+        response = await self._call_llm(prompt, system_prompt)
         await self._consume_tokens(user_id, cost)
 
         # Parse JSON response
@@ -826,7 +708,7 @@ Generate {request.question_count} high-quality multiple-choice questions."""
     async def generate_visual(
         self, user_id: str, request: GenerateVisualRequest
     ) -> GeneratedVisual:
-        """Generate a visual/image using nano-banana-pro (Gemini).
+        """Generate a visual/image using the Anvil router's vision tier.
 
         Args:
             user_id: User ID for token management
@@ -838,21 +720,11 @@ Generate {request.question_count} high-quality multiple-choice questions."""
         cost = TOKEN_COSTS["generate_visual"]
         await self._check_token_balance(user_id, cost)
 
-        # Check for Gemini API key
-        gemini_api_key = self.settings.gemini_api_key
-        if not gemini_api_key:
-            # Try to load from ~/.env
-            env_path = Path.home() / ".env"
-            if env_path.exists():
-                with open(env_path) as f:
-                    for line in f:
-                        if line.startswith("GEMINI_API_KEY="):
-                            gemini_api_key = line.split("=", 1)[1].strip().strip('"')
-                            break
-
-        if not gemini_api_key:
+        client = get_anvil_client(self.settings)
+        if not client.is_configured:
             raise AIServiceException(
-                "Image generation not configured: missing GEMINI_API_KEY",
+                "Image generation not configured: ANVIL_ROUTER_BASE_URL and "
+                "ANVIL_ROUTER_TOKEN required",
                 code=ErrorCode.AI_SERVICE_UNAVAILABLE,
             )
 
@@ -866,10 +738,18 @@ Generate {request.question_count} high-quality multiple-choice questions."""
         }
         style_desc = style_descriptions.get(request.style, "educational diagram")
 
+        aspect_sizes = {
+            "square": "square (1:1)",
+            "landscape": "landscape (16:9)",
+            "portrait": "portrait (9:16)",
+        }
+        aspect_desc = aspect_sizes.get(request.aspect, "landscape (16:9)")
+
         # Build the image prompt
         image_prompt = f"""{request.description}
 
 Style: {style_desc}
+Aspect ratio: {aspect_desc}
 Requirements:
 - Clean, professional design
 - White or light background
@@ -886,70 +766,37 @@ Requirements:
         filename = f"{uuid4()}.png"
         output_path = image_dir / filename
 
-        # Find nano-banana-pro skill script
-        skill_dir = Path.home() / ".claude" / "plugins" / "cache" / "buildatscale-claude-code" / "nano-banana-pro"
-
-        # Find the most recent version
-        script_path = None
-        if skill_dir.exists():
-            for version_dir in skill_dir.iterdir():
-                potential_script = version_dir / "skills" / "generate" / "scripts" / "image.py"
-                if potential_script.exists():
-                    script_path = potential_script
-                    break
-
-        if not script_path or not script_path.exists():
-            raise AIServiceException(
-                "Image generation not available: nano-banana-pro skill not found",
-                code=ErrorCode.AI_SERVICE_UNAVAILABLE,
-            )
-
-        # Run the image generation command
         try:
-            env = os.environ.copy()
-            env["GEMINI_API_KEY"] = gemini_api_key
-
-            cmd = [
-                "uv", "run", str(script_path),
-                "--prompt", image_prompt,
-                "--output", str(output_path),
-                "--model", request.model,
-                "--aspect", request.aspect,
-            ]
-
-            # Run in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                lambda: subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    env=env,
-                    timeout=120,
-                )
+            result = await client.generate_image(
+                image_prompt,
+                model=self.settings.anvil_vision_model,
             )
 
-            if result.returncode != 0:
+            if not result:
                 raise AIServiceException(
-                    f"Image generation failed: {result.stderr}",
+                    "Image generation failed: empty response from vision model",
                     code=ErrorCode.AI_SERVICE_ERROR,
                 )
 
-            if not output_path.exists():
-                raise AIServiceException(
-                    "Image generation failed: output file not created",
-                    code=ErrorCode.AI_SERVICE_ERROR,
-                )
+            # Persist whatever the vision tier returned. If it produced an
+            # image URL (data URI or http), keep the reference; if it produced
+            # text (a detailed description), save that as a .txt fallback so
+            # downstream rendering still has something to show.
+            if result.startswith("data:image") or result.startswith("http"):
+                output_path.write_text(result)
+            else:
+                text_path = image_dir / f"{uuid4()}.txt"
+                text_path.write_text(result)
+                output_path = text_path
 
-        except subprocess.TimeoutExpired:
-            raise AIServiceException(
-                "Image generation timed out",
-                code=ErrorCode.AI_SERVICE_ERROR,
-            )
+        except AIServiceException:
+            raise
         except Exception as e:
-            if isinstance(e, AIServiceException):
-                raise
+            logger.error(
+                "Image generation error",
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )
             raise AIServiceException(
                 f"Image generation error: {e}",
                 code=ErrorCode.AI_SERVICE_ERROR,
@@ -959,7 +806,7 @@ Requirements:
         await self._consume_tokens(user_id, cost)
 
         # Build response
-        url = f"/api/v1/uploads/courses/{request.course_id}/{request.module_id}/visuals/{filename}"
+        url = f"/api/v1/uploads/courses/{request.course_id}/{request.module_id}/visuals/{output_path.name}"
         markdown_ref = f"![{request.description[:50]}]({url})"
 
         return GeneratedVisual(
@@ -1002,7 +849,7 @@ Requirements:
                     return await self.generate_visual(user_id, request)
                 except Exception as e:
                     logger.error(
-                        f"Batch visual generation failed for item",
+                        "Batch visual generation failed for item",
                         description=request.description[:50],
                         error_type=type(e).__name__,
                         error_message=str(e),
@@ -1016,7 +863,7 @@ Requirements:
         # Log summary
         success_count = sum(1 for r in results if not isinstance(r, Exception))
         logger.info(
-            f"Batch visual generation completed",
+            "Batch visual generation completed",
             total=len(requests),
             success=success_count,
             failed=len(requests) - success_count,
