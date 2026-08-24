@@ -26,6 +26,29 @@ logger = get_logger(__name__)
 DEFAULT_TIMEOUT_SECONDS = 300.0
 
 
+async def _post_completion(
+    client: httpx.AsyncClient,
+    url: str,
+    payload: dict,
+    headers: dict,
+    timeout: float,
+) -> httpx.Response:
+    """POST the completion with the already-open client.
+
+    Used for the empty-content retry. The client is already entered (the
+    caller holds it), so this just posts and maps HTTP errors.
+    """
+    try:
+        return await client.post(url, json=payload, headers=headers)
+    except httpx.ConnectError as e:
+        raise AIServiceException(
+            f"Failed to connect to AI service: {e}",
+            code=ErrorCode.AI_SERVICE_UNAVAILABLE,
+        ) from e
+    except (httpx.TimeoutException, httpx.HTTPError) as e:
+        raise AIServiceException(f"AI service request failed: {e}") from e
+
+
 class AnvilClient:
     """Async client for the Anvil router's OpenAI-compatible chat API."""
 
@@ -125,6 +148,53 @@ class AnvilClient:
 
                 data = response.json()
                 content = data["choices"][0]["message"]["content"] or ""
+
+                if not content.strip():
+                    # The router occasionally returns an empty content field
+                    # (e.g. a thinking-only or truncated completion). Retry
+                    # once with a fresh client before failing, so transient
+                    # empty responses self-heal instead of surfacing as a
+                    # cryptic "Failed to parse AI response: Expecting value".
+                    logger.warning(
+                        "Anvil router returned empty completion; retrying once",
+                        model=model,
+                        duration_ms=round(duration_ms, 2),
+                    )
+                    retry_response = await _post_completion(
+                        client,
+                        url,
+                        payload,
+                        self._headers(),
+                        self.timeout,
+                    )
+                    duration_ms = (time.perf_counter() - start_time) * 1000
+                    if retry_response.status_code == 200:
+                        retry_data = retry_response.json()
+                        retry_content = (
+                            retry_data["choices"][0]["message"]["content"] or ""
+                        )
+                        if retry_content.strip():
+                            content = retry_content
+                        else:
+                            logger.error(
+                                "Anvil router empty completion (retry also empty)",
+                                model=model,
+                                duration_ms=round(duration_ms, 2),
+                            )
+                            raise AIServiceException(
+                                "AI service returned an empty response",
+                                code=ErrorCode.AI_SERVICE_ERROR,
+                            )
+                    else:
+                        logger.error(
+                            "Anvil router retry failed",
+                            status_code=retry_response.status_code,
+                            model=model,
+                        )
+                        raise AIServiceException(
+                            f"AI service error (HTTP {retry_response.status_code})",
+                            code=ErrorCode.AI_SERVICE_ERROR,
+                        )
 
                 usage = data.get("usage") or {}
                 logger.info(
