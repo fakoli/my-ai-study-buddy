@@ -122,6 +122,44 @@ class TestComplete:
                 await client.complete("hi")
         assert exc.value.code == ErrorCode.AI_SERVICE_ERROR
 
+    @pytest.mark.asyncio
+    async def test_empty_content_retry_success(self):
+        """Empty content triggers a retry; second response has content."""
+        client = AnvilClient(_settings())
+        empty_resp = _FakeResponse(
+            200, {"choices": [{"message": {"content": ""}}], "usage": {}}
+        )
+        ok_resp = _FakeResponse(
+            200, {"choices": [{"message": {"content": "recovered"}}], "usage": {}}
+        )
+        post = AsyncMock(side_effect=[empty_resp, ok_resp])
+        with patch("services.anvil_client.httpx.AsyncClient") as MockAC:
+            MockAC.return_value.__aenter__ = AsyncMock(
+                return_value=MagicMock(post=post)
+            )
+            MockAC.return_value.__aexit__ = AsyncMock(return_value=False)
+            result = await client.complete("hi")
+        assert result == "recovered"
+        assert post.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_empty_content_retry_also_empty_raises(self):
+        """Both attempts empty -> clear error, not a parse error."""
+        client = AnvilClient(_settings())
+        empty_resp = _FakeResponse(
+            200, {"choices": [{"message": {"content": ""}}], "usage": {}}
+        )
+        post = AsyncMock(return_value=empty_resp)
+        with patch("services.anvil_client.httpx.AsyncClient") as MockAC:
+            MockAC.return_value.__aenter__ = AsyncMock(
+                return_value=MagicMock(post=post)
+            )
+            MockAC.return_value.__aexit__ = AsyncMock(return_value=False)
+            with pytest.raises(AIServiceException) as exc:
+                await client.complete("hi")
+        assert "empty response" in str(exc.value).lower()
+        assert post.await_count == 2
+
 
 class TestGenerateImage:
     @pytest.mark.asyncio
